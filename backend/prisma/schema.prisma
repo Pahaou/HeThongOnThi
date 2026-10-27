@@ -24,6 +24,7 @@ model User {
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
   refreshTokens RefreshToken[]
+  courses       Course[]
 
   @@map("users")
 }
@@ -43,4 +44,72 @@ model RefreshToken {
   @@index([userId])
   @@index([familyId])
   @@map("refresh_tokens")
+}
+
+enum LessonType {
+  VIDEO
+  READING
+}
+
+model Course {
+  id           String    @id @default(uuid()) @db.Uuid
+  instructorId String    @map("instructor_id") @db.Uuid
+  slug         String    @unique
+  title        String
+  description  String    @default("")
+  thumbnailUrl String?   @map("thumbnail_url")
+  published    Boolean   @default(false)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  instructor   User      @relation(fields: [instructorId], references: [id])
+  chapters     Chapter[]
+
+  @@index([instructorId])
+  @@index([published])
+  @@map("courses")
+}
+
+model Chapter {
+  id       String   @id @default(uuid()) @db.Uuid
+  courseId String   @map("course_id") @db.Uuid
+  title    String
+  position Int
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons  Lesson[]
+
+  @@index([courseId, position])
+  @@map("chapters")
+}
+
+model Lesson {
+  id          String       @id @default(uuid()) @db.Uuid
+  chapterId   String       @map("chapter_id") @db.Uuid
+  type        LessonType
+  title       String
+  // VIDEO: URL YouTube hoặc file mp4; READING: để trống
+  videoUrl    String?      @map("video_url")
+  // Nội dung markdown: bài đọc, hoặc ghi chú kèm video
+  content     String       @default("")
+  durationSec Int          @default(0) @map("duration_sec")
+  position    Int
+  chapter     Chapter      @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  attachments Attachment[]
+
+  @@index([chapterId, position])
+  @@map("lessons")
+}
+
+model Attachment {
+  id         String   @id @default(uuid()) @db.Uuid
+  lessonId   String   @map("lesson_id") @db.Uuid
+  fileName   String   @map("file_name")
+  // Tên file lưu trên đĩa (ngẫu nhiên), không phải tên người dùng upload
+  storageKey String   @unique @map("storage_key")
+  mimeType   String   @map("mime_type")
+  size       Int
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  lesson     Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+  @@map("attachments")
 }

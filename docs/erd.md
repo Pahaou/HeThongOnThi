@@ -56,10 +56,11 @@ erDiagram
     courses {
         uuid id PK
         uuid instructor_id FK
-        string slug UK
+        string slug UK "sinh từ tiêu đề, không đổi khi đổi tên"
         string title
         text description
-        bool published
+        string thumbnail_url
+        bool published "chỉ công bố khi có ít nhất một bài"
     }
     learning_paths {
         uuid id PK
@@ -81,15 +82,18 @@ erDiagram
         uuid chapter_id FK
         enum type "VIDEO | READING"
         string title
-        text content "markdown hoặc URL video"
+        string video_url "YouTube hoặc mp4, bắt buộc với VIDEO"
+        text content "markdown"
         int duration_sec
         int position
     }
     attachments {
         uuid id PK
         uuid lesson_id FK
-        string file_url
-        string file_name
+        string file_name "tên gốc, giữ tiếng Việt"
+        string storage_key UK "tên ngẫu nhiên trên đĩa"
+        string mime_type
+        int size
     }
     enrollments {
         uuid id PK

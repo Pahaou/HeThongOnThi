@@ -22,12 +22,22 @@ export class JwtAuthGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (isPublic) return true;
-
     const req = context
       .switchToHttp()
       .getRequest<Request & { user?: JwtPayload }>();
     const [type, token] = req.headers.authorization?.split(' ') ?? [];
+
+    if (isPublic) {
+      // Route công khai vẫn đọc user nếu có token hợp lệ (vd. giảng viên
+      // xem trước khóa học chưa công bố), token sai thì coi như khách.
+      if (type === 'Bearer' && token) {
+        req.user = await this.jwt
+          .verifyAsync<JwtPayload>(token)
+          .catch(() => undefined);
+      }
+      return true;
+    }
+
     if (type !== 'Bearer' || !token) throw new UnauthorizedException();
 
     try {

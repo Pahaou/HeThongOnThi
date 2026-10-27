@@ -26,7 +26,16 @@ cd frontend && npm install && npm run dev         # http://localhost:5173
 ```
 Frontend proxy `/api` sang backend.
 
-Tài khoản admin mặc định: `admin@hton.local` / `Admin@123` (đổi trong `backend/.env`).
+Tài khoản do seed tạo:
+
+| Vai trò | Email | Mật khẩu |
+|---|---|---|
+| Admin | `admin@hton.local` | `Admin@123` (đổi trong `backend/.env`) |
+| Giảng viên | `gv@hton.local` | `Giangvien@123` |
+
+Seed cũng tạo khóa học mẫu "Nhập môn lập trình Web" đã công bố.
+
+File đính kèm lưu ở `backend/uploads/` (đổi bằng `UPLOAD_DIR`), chỉ tải được qua API có kiểm tra quyền.
 
 ## Kiểm thử
 ```bash
