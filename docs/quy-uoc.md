@@ -1,9 +1,8 @@
 # Quy ước nhánh và commit
 
 ## Nhánh
-- `main`: luôn chạy được, chỉ merge từ `develop` khi xong một giai đoạn (gắn tag `v0.1`, `v0.2`, ...).
-- `develop`: nhánh tích hợp hằng ngày.
-- `feat/<ten-ngan>`, `fix/<ten-ngan>`, `docs/<ten-ngan>`, `test/<ten-ngan>`: tách từ `develop`, merge lại qua PR (CI phải xanh).
+- `main`: luôn chạy được. Xong mỗi giai đoạn thì gắn tag (`v0.1`, `v0.2`, ...).
+- `feat/<ten-ngan>`, `fix/<ten-ngan>`, `docs/<ten-ngan>`, `test/<ten-ngan>`: tách từ `main`, merge lại qua PR (CI phải xanh).
 
 ## Commit (Conventional Commits)
 ```
