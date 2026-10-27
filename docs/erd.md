@@ -48,7 +48,8 @@ erDiagram
     refresh_tokens {
         uuid id PK
         uuid user_id FK
-        string token_hash
+        uuid family_id "chuỗi xoay vòng, thu hồi cả chuỗi khi token cũ bị dùng lại"
+        string token_hash UK "sha256, không lưu token gốc"
         timestamptz expires_at
         timestamptz revoked_at
     }

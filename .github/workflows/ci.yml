@@ -8,18 +8,35 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hton
+          POSTGRES_PASSWORD: hton
+          POSTGRES_DB: hton_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hton"
+          --health-interval 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://hton:hton@localhost:5432/hton_test?schema=public
+      JWT_ACCESS_SECRET: ci-secret
     defaults:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
-      - run: npx eslint "{src,test}/**/*.ts"
+      - run: npx prisma migrate deploy
+      - run: npx eslint "{src,test,prisma}/**/*.ts"
       - run: npm run build
       - run: npm test
       - run: npm run test:e2e
@@ -30,10 +47,10 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
