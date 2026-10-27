@@ -1,27 +1,39 @@
-import { BrowserRouter, Link, Route, Routes } from 'react-router'
+import { BrowserRouter, Link, NavLink, Route, Routes } from 'react-router'
 import { useAuth } from './auth/auth-context'
 import { AuthProvider } from './auth/AuthProvider'
 import { RequireAuth } from './auth/RequireAuth'
 import { AdminUsersPage } from './pages/AdminUsersPage'
-import { HomePage } from './pages/HomePage'
+import { CatalogPage } from './pages/CatalogPage'
+import { CourseDetailPage } from './pages/CourseDetailPage'
+import { LessonPage } from './pages/LessonPage'
 import { LoginPage } from './pages/LoginPage'
+import { CourseEditorPage } from './pages/manage/CourseEditorPage'
+import { ManageCoursesPage } from './pages/manage/ManageCoursesPage'
 import { RegisterPage } from './pages/RegisterPage'
 
 function Header() {
   const { user, logout } = useAuth()
+  const canManage = user?.role === 'INSTRUCTOR' || user?.role === 'ADMIN'
   return (
     <header className="topbar">
       <Link to="/" className="brand">
         HTON
       </Link>
       <nav>
-        {user?.role === 'ADMIN' && <Link to="/admin/users">Người dùng</Link>}
+        <NavLink to="/" end>
+          Khóa học
+        </NavLink>
+        {canManage && <NavLink to="/manage">Soạn khóa học</NavLink>}
+        {user?.role === 'ADMIN' && <NavLink to="/admin/users">Người dùng</NavLink>}
         {user ? (
-          <button className="link" onClick={() => void logout()}>
-            Đăng xuất
-          </button>
+          <>
+            <span className="muted">{user.fullName}</span>
+            <button className="link" onClick={() => void logout()}>
+              Đăng xuất
+            </button>
+          </>
         ) : (
-          <Link to="/login">Đăng nhập</Link>
+          <NavLink to="/login">Đăng nhập</NavLink>
         )}
       </nav>
     </header>
@@ -35,13 +47,31 @@ function App() {
         <Header />
         <main className="container">
           <Routes>
+            <Route path="/" element={<CatalogPage />} />
+            <Route path="/courses/:slug" element={<CourseDetailPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route
-              path="/"
+              path="/learn/:slug/:lessonId"
               element={
                 <RequireAuth>
-                  <HomePage />
+                  <LessonPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/manage"
+              element={
+                <RequireAuth roles={['INSTRUCTOR', 'ADMIN']}>
+                  <ManageCoursesPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/manage/courses/:id"
+              element={
+                <RequireAuth roles={['INSTRUCTOR', 'ADMIN']}>
+                  <CourseEditorPage />
                 </RequireAuth>
               }
             />

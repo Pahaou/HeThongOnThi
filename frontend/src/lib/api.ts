@@ -66,9 +66,12 @@ export function refreshSession(): Promise<AuthResponse> {
   return refreshing
 }
 
-export async function api<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
+async function request(path: string, init: RequestInit, retry: boolean): Promise<Response> {
   const headers = new Headers(init.headers)
-  if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+  // FormData tự đặt Content-Type kèm boundary, chỉ gắn JSON cho body dạng chuỗi
+  if (typeof init.body === 'string' && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
 
   const res = await fetch(`/api${path}`, { ...init, headers, credentials: 'include' })
@@ -81,9 +84,25 @@ export async function api<T>(path: string, init: RequestInit = {}, retry = true)
       onSessionExpired?.()
       throw await parseError(res)
     }
-    return api<T>(path, init, false)
+    return request(path, init, false)
   }
   if (!res.ok) throw await parseError(res)
+  return res
+}
+
+export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await request(path, init, true)
   if (res.status === 204) return undefined as T
   return (await res.json()) as T
+}
+
+/** Tải file cần đăng nhập: lấy blob rồi kích hoạt lưu file ở trình duyệt. */
+export async function downloadFile(path: string, fileName: string): Promise<void> {
+  const res = await request(path, {}, true)
+  const url = URL.createObjectURL(await res.blob())
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  a.click()
+  URL.revokeObjectURL(url)
 }
