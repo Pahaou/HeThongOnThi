@@ -9,6 +9,8 @@
   --error: #c62828;
 
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Chữ to dần theo bề rộng màn hình: 16px trên điện thoại, tối đa 19px trên màn lớn */
+  font-size: clamp(16px, 0.85rem + 0.35vw, 19px);
   line-height: 1.5;
   color: var(--text);
   background: var(--bg);
@@ -43,71 +45,73 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 16px clamp(16px, 4vw, 48px);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
 
 .topbar nav {
   display: flex;
-  gap: 16px;
+  gap: 24px;
   align-items: center;
 }
 
 .brand {
+  font-size: 1.4rem;
   font-weight: 700;
   text-decoration: none;
   color: var(--text);
 }
 
 .container {
-  max-width: 960px;
-  margin: 24px auto;
-  padding: 0 16px;
+  max-width: 1280px;
+  margin: clamp(24px, 6vh, 64px) auto;
+  padding: 0 clamp(16px, 4vw, 48px);
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 24px;
+  border-radius: 12px;
+  padding: clamp(24px, 3vw, 40px);
 }
 
 .card h1 {
   margin-top: 0;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
 }
 
 .auth-form {
-  max-width: 400px;
+  max-width: 480px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
 }
 
 label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 0.9rem;
+  gap: 6px;
+  font-size: 0.95rem;
 }
 
 input,
 select {
   font: inherit;
-  padding: 8px 10px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--bg);
   color: var(--text);
 }
 
 button {
   font: inherit;
-  padding: 10px 14px;
+  font-weight: 600;
+  padding: 12px 18px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--primary);
   color: var(--primary-text);
   cursor: pointer;
@@ -144,6 +148,6 @@ table {
 th,
 td {
   text-align: left;
-  padding: 8px;
+  padding: 12px;
   border-bottom: 1px solid var(--border);
 }
