@@ -216,6 +216,12 @@ describe('Courses (e2e)', () => {
     expect(outline.chapters[0].lessons[0].content).toBeUndefined();
 
     await http().get(`/api/lessons/${lesson.id}`).expect(401);
+    // Chưa ghi danh thì chưa xem được nội dung
+    await http().get(`/api/lessons/${lesson.id}`).set(as(student)).expect(403);
+    await http()
+      .post(`/api/courses/${course.id}/enroll`)
+      .set(as(student))
+      .expect(201);
     const full = await http()
       .get(`/api/lessons/${lesson.id}`)
       .set(as(student))

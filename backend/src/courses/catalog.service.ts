@@ -4,10 +4,14 @@ import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { canManageCourse } from './course-access';
 import { ListCoursesQuery } from './dto/course.dto';
+import { EnrollmentService } from './enrollment.service';
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly enrollments: EnrollmentService,
+  ) {}
 
   async list(query: ListCoursesQuery) {
     const where: Prisma.CourseWhereInput = { published: true };
@@ -75,10 +79,20 @@ export class CatalogService {
         },
       },
     });
-    if (!course || (!course.published && !canManageCourse(course, viewer))) {
+    const canManage = !!course && canManageCourse(course, viewer);
+    if (!course || (!course.published && !canManage)) {
       throw new NotFoundException('Không tìm thấy khóa học');
     }
-    return course;
+    const enrollment = viewer
+      ? await this.enrollments.find(viewer.sub, course.id)
+      : null;
+    return {
+      ...course,
+      canManage,
+      enrollment: enrollment
+        ? await this.enrollments.summary(enrollment)
+        : null,
+    };
   }
 
   async lesson(lessonId: string, viewer: JwtPayload) {
@@ -106,10 +120,26 @@ export class CatalogService {
         },
       },
     });
-    if (!lesson || !this.canView(lesson.chapter.course, viewer)) {
-      throw new NotFoundException('Không tìm thấy bài học');
-    }
-    return lesson;
+    if (!lesson) throw new NotFoundException('Không tìm thấy bài học');
+    const enrollment = await this.enrollments.assertCanLearn(
+      lesson.chapter.course,
+      viewer,
+      'Không tìm thấy bài học',
+    );
+    const progress = enrollment
+      ? await this.prisma.lessonProgress.findUnique({
+          where: {
+            enrollmentId_lessonId: { enrollmentId: enrollment.id, lessonId },
+          },
+        })
+      : null;
+    return {
+      ...lesson,
+      progress: progress && {
+        positionSec: progress.positionSec,
+        completed: progress.completedAt !== null,
+      },
+    };
   }
 
   async attachment(attachmentId: string, viewer: JwtPayload) {
@@ -119,19 +149,12 @@ export class CatalogService {
         lesson: { select: { chapter: { select: { course: true } } } },
       },
     });
-    if (
-      !attachment ||
-      !this.canView(attachment.lesson.chapter.course, viewer)
-    ) {
-      throw new NotFoundException('Không tìm thấy tài liệu');
-    }
+    if (!attachment) throw new NotFoundException('Không tìm thấy tài liệu');
+    await this.enrollments.assertCanLearn(
+      attachment.lesson.chapter.course,
+      viewer,
+      'Không tìm thấy tài liệu',
+    );
     return attachment;
-  }
-
-  private canView(
-    course: { published: boolean; instructorId: string },
-    viewer: JwtPayload,
-  ): boolean {
-    return course.published || canManageCourse(course, viewer);
   }
 }

@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
 import { CatalogController } from './catalog.controller';
 import { CatalogService } from './catalog.service';
+import { EnrollmentController } from './enrollment.controller';
+import { EnrollmentService } from './enrollment.service';
 import { ManageController } from './manage.controller';
 import { ManageService } from './manage.service';
 import { StorageService, uploadDir } from './storage.service';
@@ -16,7 +18,7 @@ import { attachmentMulterOptions } from './upload.config';
         attachmentMulterOptions(uploadDir(config)),
     }),
   ],
-  controllers: [CatalogController, ManageController],
-  providers: [CatalogService, ManageService, StorageService],
+  controllers: [CatalogController, ManageController, EnrollmentController],
+  providers: [CatalogService, ManageService, StorageService, EnrollmentService],
 })
 export class CoursesModule {}

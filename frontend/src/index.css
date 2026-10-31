@@ -527,3 +527,47 @@ button.icon {
 .danger-zone {
   border-color: var(--error);
 }
+
+/* ---------- Ghi danh và tiến độ ---------- */
+.progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.3s;
+}
+
+.lesson-icon {
+  width: 1.4em;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.lesson-icon.done {
+  color: #17692c;
+  font-weight: 700;
+}
+
+.complete-box {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.course-card-body h2 a {
+  color: var(--text);
+  text-decoration: none;
+}

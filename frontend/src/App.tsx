@@ -9,6 +9,7 @@ import { LessonPage } from './pages/LessonPage'
 import { LoginPage } from './pages/LoginPage'
 import { CourseEditorPage } from './pages/manage/CourseEditorPage'
 import { ManageCoursesPage } from './pages/manage/ManageCoursesPage'
+import { MyCoursesPage } from './pages/MyCoursesPage'
 import { RegisterPage } from './pages/RegisterPage'
 
 function Header() {
@@ -23,6 +24,7 @@ function Header() {
         <NavLink to="/" end>
           Khóa học
         </NavLink>
+        {user && <NavLink to="/my-courses">Khóa học của tôi</NavLink>}
         {canManage && <NavLink to="/manage">Soạn khóa học</NavLink>}
         {user?.role === 'ADMIN' && <NavLink to="/admin/users">Người dùng</NavLink>}
         {user ? (
@@ -56,6 +58,14 @@ function App() {
               element={
                 <RequireAuth>
                   <LessonPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/my-courses"
+              element={
+                <RequireAuth>
+                  <MyCoursesPage />
                 </RequireAuth>
               }
             />

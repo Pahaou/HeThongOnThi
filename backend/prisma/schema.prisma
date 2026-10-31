@@ -25,6 +25,7 @@ model User {
   updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
   refreshTokens RefreshToken[]
   courses       Course[]
+  enrollments   Enrollment[]
 
   @@map("users")
 }
@@ -52,17 +53,18 @@ enum LessonType {
 }
 
 model Course {
-  id           String    @id @default(uuid()) @db.Uuid
-  instructorId String    @map("instructor_id") @db.Uuid
-  slug         String    @unique
+  id           String       @id @default(uuid()) @db.Uuid
+  instructorId String       @map("instructor_id") @db.Uuid
+  slug         String       @unique
   title        String
-  description  String    @default("")
-  thumbnailUrl String?   @map("thumbnail_url")
-  published    Boolean   @default(false)
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-  instructor   User      @relation(fields: [instructorId], references: [id])
+  description  String       @default("")
+  thumbnailUrl String?      @map("thumbnail_url")
+  published    Boolean      @default(false)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+  instructor   User         @relation(fields: [instructorId], references: [id])
   chapters     Chapter[]
+  enrollments  Enrollment[]
 
   @@index([instructorId])
   @@index([published])
@@ -82,18 +84,20 @@ model Chapter {
 }
 
 model Lesson {
-  id          String       @id @default(uuid()) @db.Uuid
-  chapterId   String       @map("chapter_id") @db.Uuid
+  id          String           @id @default(uuid()) @db.Uuid
+  chapterId   String           @map("chapter_id") @db.Uuid
   type        LessonType
   title       String
   // VIDEO: URL YouTube hoặc file mp4; READING: để trống
-  videoUrl    String?      @map("video_url")
+  videoUrl    String?          @map("video_url")
   // Nội dung markdown: bài đọc, hoặc ghi chú kèm video
-  content     String       @default("")
-  durationSec Int          @default(0) @map("duration_sec")
+  content     String           @default("")
+  durationSec Int              @default(0) @map("duration_sec")
   position    Int
-  chapter     Chapter      @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  chapter     Chapter          @relation(fields: [chapterId], references: [id], onDelete: Cascade)
   attachments Attachment[]
+  progress    LessonProgress[]
+  lastOf      Enrollment[]
 
   @@index([chapterId, position])
   @@map("lessons")
@@ -112,4 +116,37 @@ model Attachment {
 
   @@index([lessonId])
   @@map("attachments")
+}
+
+model Enrollment {
+  id           String           @id @default(uuid()) @db.Uuid
+  userId       String           @map("user_id") @db.Uuid
+  courseId     String           @map("course_id") @db.Uuid
+  // Bài học mở gần nhất, dùng cho nút "Học tiếp"
+  lastLessonId String?          @map("last_lesson_id") @db.Uuid
+  enrolledAt   DateTime         @default(now()) @map("enrolled_at") @db.Timestamptz
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course       Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lastLesson   Lesson?          @relation(fields: [lastLessonId], references: [id], onDelete: SetNull)
+  progress     LessonProgress[]
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+  @@map("enrollments")
+}
+
+model LessonProgress {
+  enrollmentId String     @map("enrollment_id") @db.Uuid
+  lessonId     String     @map("lesson_id") @db.Uuid
+  // Vị trí xem video gần nhất (giây), để mở lại đúng chỗ
+  positionSec  Int        @default(0) @map("position_sec")
+  completedAt  DateTime?  @map("completed_at") @db.Timestamptz
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lesson       Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@id([enrollmentId, lessonId])
+  @@index([lessonId])
+  @@map("lesson_progress")
 }
