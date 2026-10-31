@@ -103,6 +103,112 @@ async function seedDemoCourse(instructorId: string) {
   console.log(`Khóa học mẫu: /courses/${slug}`);
 }
 
+async function seedJsCourse(instructorId: string) {
+  const slug = 'javascript-co-ban';
+  if (await prisma.course.findUnique({ where: { slug } })) return;
+
+  await prisma.course.create({
+    data: {
+      slug,
+      instructorId,
+      title: 'JavaScript cơ bản',
+      description:
+        'Khóa học mẫu: biến, hàm và thao tác với trang web bằng JavaScript.',
+      published: true,
+      chapters: {
+        create: [
+          {
+            title: 'Ngôn ngữ JavaScript',
+            position: 0,
+            lessons: {
+              create: [
+                {
+                  type: LessonType.READING,
+                  title: 'Biến và kiểu dữ liệu',
+                  position: 0,
+                  durationSec: 720,
+                  content: [
+                    '## Khai báo biến',
+                    '',
+                    '```js',
+                    "const name = 'HTON';",
+                    'let score = 0;',
+                    'score += 10;',
+                    '```',
+                    '',
+                    'Dùng `const` cho giá trị không gán lại, `let` cho giá trị thay đổi.',
+                  ].join('\n'),
+                },
+                {
+                  type: LessonType.READING,
+                  title: 'Hàm',
+                  position: 1,
+                  durationSec: 600,
+                  content: [
+                    '## Khai báo hàm',
+                    '',
+                    '```js',
+                    'const add = (a, b) => a + b;',
+                    'console.log(add(2, 3)); // 5',
+                    '```',
+                  ].join('\n'),
+                },
+              ],
+            },
+          },
+          {
+            title: 'JavaScript và trang web',
+            position: 1,
+            lessons: {
+              create: {
+                type: LessonType.READING,
+                title: 'Thao tác DOM',
+                position: 0,
+                durationSec: 900,
+                content: [
+                  '## Chọn và sửa phần tử',
+                  '',
+                  '```js',
+                  "document.querySelector('h1').textContent = 'Xin chào';",
+                  '```',
+                ].join('\n'),
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  console.log(`Khóa học mẫu: /courses/${slug}`);
+}
+
+async function seedDemoPath(createdById: string) {
+  const slug = 'lap-trinh-web-tu-con-so-0';
+  if (await prisma.learningPath.findUnique({ where: { slug } })) return;
+
+  const courses = await prisma.course.findMany({
+    where: { slug: { in: ['nhap-mon-lap-trinh-web', 'javascript-co-ban'] } },
+    select: { id: true, slug: true },
+  });
+  const order = ['nhap-mon-lap-trinh-web', 'javascript-co-ban'];
+  courses.sort((a, b) => order.indexOf(a.slug) - order.indexOf(b.slug));
+
+  await prisma.learningPath.create({
+    data: {
+      slug,
+      createdById,
+      title: 'Lập trình Web từ con số 0',
+      description:
+        'Lộ trình mẫu: bắt đầu từ HTML/CSS rồi tới JavaScript để tự dựng trang web.',
+      published: true,
+      courses: {
+        create: courses.map((c, position) => ({ courseId: c.id, position })),
+      },
+    },
+  });
+  console.log(`Lộ trình mẫu: /paths/${slug}`);
+}
+
 async function main() {
   const adminEmail = (
     process.env.ADMIN_EMAIL ?? 'admin@hton.local'
@@ -123,6 +229,8 @@ async function main() {
   );
   console.log('Giảng viên mẫu: gv@hton.local');
   await seedDemoCourse(instructor.id);
+  await seedJsCourse(instructor.id);
+  await seedDemoPath(instructor.id);
 
   await upsertUser(
     'hv@hton.local',

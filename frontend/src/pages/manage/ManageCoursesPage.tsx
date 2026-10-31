@@ -39,6 +39,7 @@ export function ManageCoursesPage() {
     <section className="stack">
       <div className="page-head">
         <h1>Quản lý khóa học</h1>
+        <Link to="/manage/paths">Quản lý lộ trình →</Link>
       </div>
 
       <form className="card inline-form" onSubmit={onCreate}>

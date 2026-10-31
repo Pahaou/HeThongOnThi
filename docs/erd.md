@@ -8,6 +8,7 @@ erDiagram
     users ||--o{ courses : "teaches (instructor)"
     users ||--o{ enrollments : enrolls
     courses ||--o{ enrollments : has
+    users ||--o{ learning_paths : creates
     learning_paths ||--o{ learning_path_courses : contains
     courses ||--o{ learning_path_courses : "in"
     courses ||--o{ chapters : has
@@ -64,11 +65,15 @@ erDiagram
     }
     learning_paths {
         uuid id PK
+        uuid created_by_id FK "giảng viên/admin tạo"
+        string slug UK
         string title
+        text description
+        bool published "cần ít nhất một khóa đã công bố"
     }
     learning_path_courses {
-        uuid path_id FK
-        uuid course_id FK
+        uuid path_id PK "PK ghép với course_id"
+        uuid course_id PK
         int position
     }
     chapters {

@@ -571,3 +571,92 @@ button.icon {
   color: var(--text);
   text-decoration: none;
 }
+
+/* ---------- Lộ trình học ---------- */
+.clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.path-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.path-card {
+  display: block;
+  color: var(--text);
+  text-decoration: none;
+  border-left: 4px solid var(--primary);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.path-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.08);
+}
+
+.path-card h2 {
+  margin-bottom: 8px;
+}
+
+.path-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.path-step {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.path-step-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.path-step-body h2 {
+  margin: 0 0 4px;
+}
+
+.path-step-body h2 a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.path-step-body p {
+  margin: 0 0 8px;
+}
+
+.step-no {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.step-no.done {
+  background: #d7f5dd;
+  color: #17692c;
+}
+
+@media (max-width: 640px) {
+  .path-step {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
