@@ -34,7 +34,7 @@ Tài khoản do seed tạo:
 | Giảng viên | `gv@hton.local` | `Giangvien@123` |
 | Học viên | `hv@hton.local` | `Hocvien@123` |
 
-Seed cũng tạo khóa học mẫu "Nhập môn lập trình Web" đã công bố.
+Seed cũng tạo hai khóa học mẫu đã công bố ("Nhập môn lập trình Web", "JavaScript cơ bản") và lộ trình "Lập trình Web từ con số 0" gồm hai khóa đó.
 
 File đính kèm lưu ở `backend/uploads/` (đổi bằng `UPLOAD_DIR`), chỉ tải được qua API có kiểm tra quyền.
 

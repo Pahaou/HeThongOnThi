@@ -29,6 +29,11 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
+      // Biến bắt đầu bằng _ là cố ý bỏ qua (vd. tách trường khỏi object)
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },

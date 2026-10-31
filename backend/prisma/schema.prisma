@@ -26,6 +26,7 @@ model User {
   refreshTokens RefreshToken[]
   courses       Course[]
   enrollments   Enrollment[]
+  learningPaths LearningPath[]
 
   @@map("users")
 }
@@ -53,18 +54,19 @@ enum LessonType {
 }
 
 model Course {
-  id           String       @id @default(uuid()) @db.Uuid
-  instructorId String       @map("instructor_id") @db.Uuid
-  slug         String       @unique
+  id           String               @id @default(uuid()) @db.Uuid
+  instructorId String               @map("instructor_id") @db.Uuid
+  slug         String               @unique
   title        String
-  description  String       @default("")
-  thumbnailUrl String?      @map("thumbnail_url")
-  published    Boolean      @default(false)
-  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz
-  instructor   User         @relation(fields: [instructorId], references: [id])
+  description  String               @default("")
+  thumbnailUrl String?              @map("thumbnail_url")
+  published    Boolean              @default(false)
+  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+  instructor   User                 @relation(fields: [instructorId], references: [id])
   chapters     Chapter[]
   enrollments  Enrollment[]
+  paths        LearningPathCourse[]
 
   @@index([instructorId])
   @@index([published])
@@ -149,4 +151,32 @@ model LessonProgress {
   @@id([enrollmentId, lessonId])
   @@index([lessonId])
   @@map("lesson_progress")
+}
+
+model LearningPath {
+  id          String               @id @default(uuid()) @db.Uuid
+  createdById String               @map("created_by_id") @db.Uuid
+  slug        String               @unique
+  title       String
+  description String               @default("")
+  published   Boolean              @default(false)
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy   User                 @relation(fields: [createdById], references: [id])
+  courses     LearningPathCourse[]
+
+  @@index([createdById])
+  @@map("learning_paths")
+}
+
+model LearningPathCourse {
+  pathId   String       @map("path_id") @db.Uuid
+  courseId String       @map("course_id") @db.Uuid
+  position Int
+  path     LearningPath @relation(fields: [pathId], references: [id], onDelete: Cascade)
+  course   Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([pathId, courseId])
+  @@index([courseId])
+  @@map("learning_path_courses")
 }

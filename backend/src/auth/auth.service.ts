@@ -28,8 +28,7 @@ export interface AuthResult {
 }
 
 export function toPublicUser(user: User): PublicUser {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { passwordHash, ...rest } = user;
+  const { passwordHash: _passwordHash, ...rest } = user;
   return rest;
 }
 

@@ -166,3 +166,63 @@ export function youtubeId(url: string): string | null {
   }
   return null
 }
+
+// ---------- Lộ trình học ----------
+
+export interface PathSummary {
+  id: string
+  slug: string
+  title: string
+  description: string
+  createdBy: InstructorRef
+  courseCount: number
+}
+
+export interface PathCourse {
+  id: string
+  slug: string
+  title: string
+  description: string
+  thumbnailUrl: string | null
+  published: boolean
+  instructor: InstructorRef
+  totalLessons: number
+  enrolled: boolean
+  completedLessons: number
+  progressPercent: number
+}
+
+export interface PathDetail {
+  id: string
+  slug: string
+  title: string
+  description: string
+  published: boolean
+  createdBy: InstructorRef
+  canManage: boolean
+  courses: PathCourse[]
+  totalLessons: number
+  completedLessons: number
+  progressPercent: number | null
+}
+
+export interface ManagePathRow {
+  id: string
+  slug: string
+  title: string
+  published: boolean
+  createdBy: InstructorRef
+  _count: { courses: number }
+}
+
+export interface ManagePath {
+  id: string
+  slug: string
+  title: string
+  description: string
+  published: boolean
+  courses: {
+    position: number
+    course: { id: string; slug: string; title: string; published: boolean; instructor: InstructorRef }
+  }[]
+}
