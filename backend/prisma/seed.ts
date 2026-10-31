@@ -123,6 +123,14 @@ async function main() {
   );
   console.log('Giảng viên mẫu: gv@hton.local');
   await seedDemoCourse(instructor.id);
+
+  await upsertUser(
+    'hv@hton.local',
+    'Hocvien@123',
+    'Học viên mẫu',
+    Role.STUDENT,
+  );
+  console.log('Học viên mẫu: hv@hton.local');
 }
 
 main()

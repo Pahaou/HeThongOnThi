@@ -101,12 +101,13 @@ erDiagram
         uuid course_id FK
         uuid last_lesson_id FK "học tiếp từ chỗ dừng"
         timestamptz enrolled_at
+        timestamptz updated_at "sắp xếp Khóa học của tôi"
     }
     lesson_progress {
-        uuid enrollment_id FK
-        uuid lesson_id FK
-        int position_sec
-        bool completed
+        uuid enrollment_id PK "PK ghép với lesson_id"
+        uuid lesson_id PK
+        int position_sec "vị trí video gần nhất"
+        timestamptz completed_at "null = chưa hoàn thành"
         timestamptz updated_at
     }
     topics {

@@ -39,6 +39,14 @@ export interface OutlineChapter {
   lessons: OutlineLesson[]
 }
 
+export interface EnrollmentSummary {
+  enrolledAt: string
+  lastLessonId: string | null
+  completedLessonIds: string[]
+  totalLessons: number
+  progressPercent: number
+}
+
 export interface CourseDetail {
   id: string
   slug: string
@@ -48,6 +56,26 @@ export interface CourseDetail {
   published: boolean
   instructor: InstructorRef
   chapters: OutlineChapter[]
+  canManage: boolean
+  enrollment: EnrollmentSummary | null
+}
+
+export interface LessonProgress {
+  positionSec: number
+  completed: boolean
+}
+
+export interface MyCourse {
+  id: string
+  slug: string
+  title: string
+  thumbnailUrl: string | null
+  instructor: InstructorRef
+  enrolledAt: string
+  lastLessonId: string | null
+  completedLessons: number
+  totalLessons: number
+  progressPercent: number
 }
 
 export interface AttachmentInfo {
@@ -66,6 +94,7 @@ export interface LessonDetail {
   durationSec: number
   attachments: AttachmentInfo[]
   chapter: { id: string; title: string; course: { id: string; slug: string; title: string } }
+  progress: LessonProgress | null
 }
 
 // Dữ liệu cho trang soạn khóa học

@@ -32,6 +32,7 @@ Tài khoản do seed tạo:
 |---|---|---|
 | Admin | `admin@hton.local` | `Admin@123` (đổi trong `backend/.env`) |
 | Giảng viên | `gv@hton.local` | `Giangvien@123` |
+| Học viên | `hv@hton.local` | `Hocvien@123` |
 
 Seed cũng tạo khóa học mẫu "Nhập môn lập trình Web" đã công bố.
 
