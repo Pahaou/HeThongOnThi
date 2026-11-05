@@ -1,7 +1,13 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcryptjs';
-import { LessonType, PrismaClient, Role } from '../src/generated/prisma/client';
+import {
+  Difficulty,
+  LessonType,
+  PrismaClient,
+  QuestionType,
+  Role,
+} from '../src/generated/prisma/client';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -209,6 +215,194 @@ async function seedDemoPath(createdById: string) {
   console.log(`Lộ trình mẫu: /paths/${slug}`);
 }
 
+type SeedQuestion = [
+  topic: string,
+  type: QuestionType,
+  difficulty: Difficulty,
+  content: string,
+  options: string[],
+  correct: number[],
+  explanation: string,
+];
+
+const { SINGLE, MULTIPLE, TRUE_FALSE } = QuestionType;
+const { EASY, MEDIUM, HARD } = Difficulty;
+
+const WEB_QUESTIONS: SeedQuestion[] = [
+  [
+    'HTML',
+    SINGLE,
+    EASY,
+    'Thẻ nào dùng để tạo liên kết?',
+    ['<a>', '<link>', '<href>', '<url>'],
+    [0],
+    'Thẻ <a> với thuộc tính href tạo liên kết; <link> dùng để nạp CSS.',
+  ],
+  [
+    'HTML',
+    SINGLE,
+    EASY,
+    'Tiêu đề lớn nhất trong HTML là thẻ nào?',
+    ['<h1>', '<h6>', '<head>', '<title>'],
+    [0],
+    'Có 6 cấp tiêu đề, <h1> là lớn nhất.',
+  ],
+  [
+    'HTML',
+    MULTIPLE,
+    MEDIUM,
+    'Những thẻ nào là thẻ ngữ nghĩa (semantic)?',
+    ['<article>', '<nav>', '<div>', '<span>'],
+    [0, 1],
+    '<div> và <span> không mang ý nghĩa nội dung.',
+  ],
+  [
+    'HTML',
+    TRUE_FALSE,
+    EASY,
+    'Thẻ <img> cần có thẻ đóng </img>.',
+    ['Đúng', 'Sai'],
+    [1],
+    '<img> là thẻ rỗng, không có thẻ đóng.',
+  ],
+  [
+    'HTML',
+    SINGLE,
+    HARD,
+    'Thuộc tính nào giúp trình đọc màn hình mô tả ảnh?',
+    ['alt', 'title', 'src', 'aria-hidden'],
+    [0],
+    'alt là văn bản thay thế cho ảnh.',
+  ],
+  [
+    'CSS',
+    SINGLE,
+    EASY,
+    'Thuộc tính nào đổi màu chữ?',
+    ['color', 'font-color', 'text-color', 'background'],
+    [0],
+    '',
+  ],
+  [
+    'CSS',
+    SINGLE,
+    MEDIUM,
+    'Thứ tự các lớp trong box model từ trong ra ngoài là?',
+    [
+      'content, padding, border, margin',
+      'content, margin, border, padding',
+      'padding, content, border, margin',
+      'margin, border, padding, content',
+    ],
+    [0],
+    '',
+  ],
+  [
+    'CSS',
+    MULTIPLE,
+    MEDIUM,
+    'Những giá trị nào hợp lệ cho thuộc tính display?',
+    ['flex', 'grid', 'block', 'center'],
+    [0, 1, 2],
+    'center là giá trị của text-align/justify-content, không phải display.',
+  ],
+  [
+    'CSS',
+    TRUE_FALSE,
+    MEDIUM,
+    'Bộ chọn #id có độ ưu tiên cao hơn bộ chọn .class.',
+    ['Đúng', 'Sai'],
+    [0],
+    '',
+  ],
+  [
+    'CSS',
+    SINGLE,
+    HARD,
+    'position: sticky bám theo phần tử nào khi cuộn?',
+    [
+      'Phần tử cha gần nhất có thể cuộn',
+      'Luôn là cửa sổ trình duyệt',
+      'Phần tử có position: relative gần nhất',
+      'Thẻ body',
+    ],
+    [0],
+    '',
+  ],
+  [
+    'HTTP',
+    SINGLE,
+    EASY,
+    'Mã trạng thái nào nghĩa là không tìm thấy?',
+    ['404', '200', '500', '301'],
+    [0],
+    '',
+  ],
+  [
+    'HTTP',
+    MULTIPLE,
+    HARD,
+    'Những phương thức HTTP nào là idempotent?',
+    ['GET', 'PUT', 'DELETE', 'POST'],
+    [0, 1, 2],
+    'Gửi lại POST có thể tạo thêm bản ghi, nên không idempotent.',
+  ],
+  [
+    'HTTP',
+    TRUE_FALSE,
+    EASY,
+    'HTTPS mã hóa dữ liệu giữa trình duyệt và máy chủ.',
+    ['Đúng', 'Sai'],
+    [0],
+    '',
+  ],
+];
+
+async function seedDemoQuestions(createdById: string) {
+  const course = await prisma.course.findUnique({
+    where: { slug: 'nhap-mon-lap-trinh-web' },
+    select: { id: true, _count: { select: { questions: true } } },
+  });
+  if (!course || course._count.questions > 0) return;
+
+  const topicIds = new Map<string, string>();
+  for (const name of new Set(WEB_QUESTIONS.map((q) => q[0]))) {
+    const topic = await prisma.topic.create({
+      data: { courseId: course.id, name },
+    });
+    topicIds.set(name, topic.id);
+  }
+  for (const [
+    topic,
+    type,
+    difficulty,
+    content,
+    options,
+    correct,
+    explanation,
+  ] of WEB_QUESTIONS) {
+    await prisma.question.create({
+      data: {
+        courseId: course.id,
+        topicId: topicIds.get(topic)!,
+        createdById,
+        type,
+        difficulty,
+        content,
+        explanation,
+        options: {
+          create: options.map((o, position) => ({
+            content: o,
+            isCorrect: correct.includes(position),
+            position,
+          })),
+        },
+      },
+    });
+  }
+  console.log(`Ngân hàng câu hỏi mẫu: ${WEB_QUESTIONS.length} câu`);
+}
+
 async function main() {
   const adminEmail = (
     process.env.ADMIN_EMAIL ?? 'admin@hton.local'
@@ -231,6 +425,7 @@ async function main() {
   await seedDemoCourse(instructor.id);
   await seedJsCourse(instructor.id);
   await seedDemoPath(instructor.id);
+  await seedDemoQuestions(instructor.id);
 
   await upsertUser(
     'hv@hton.local',

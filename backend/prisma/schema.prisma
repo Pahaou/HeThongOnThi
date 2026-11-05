@@ -27,6 +27,7 @@ model User {
   courses       Course[]
   enrollments   Enrollment[]
   learningPaths LearningPath[]
+  questions     Question[]
 
   @@map("users")
 }
@@ -67,6 +68,8 @@ model Course {
   chapters     Chapter[]
   enrollments  Enrollment[]
   paths        LearningPathCourse[]
+  topics       Topic[]
+  questions    Question[]
 
   @@index([instructorId])
   @@index([published])
@@ -100,6 +103,7 @@ model Lesson {
   attachments Attachment[]
   progress    LessonProgress[]
   lastOf      Enrollment[]
+  questions   Question[]
 
   @@index([chapterId, position])
   @@map("lessons")
@@ -179,4 +183,80 @@ model LearningPathCourse {
   @@id([pathId, courseId])
   @@index([courseId])
   @@map("learning_path_courses")
+}
+
+enum QuestionType {
+  SINGLE
+  MULTIPLE
+  TRUE_FALSE
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum QuestionSource {
+  MANUAL
+  IMPORT
+  AI
+}
+
+enum QuestionStatus {
+  // DRAFT: câu AI đề xuất, chờ giảng viên duyệt (giai đoạn 4)
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model Topic {
+  id        String     @id @default(uuid()) @db.Uuid
+  courseId  String     @map("course_id") @db.Uuid
+  name      String
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions Question[]
+
+  @@unique([courseId, name])
+  @@map("topics")
+}
+
+model Question {
+  id          String           @id @default(uuid()) @db.Uuid
+  courseId    String           @map("course_id") @db.Uuid
+  topicId     String           @map("topic_id") @db.Uuid
+  // Bài học liên quan, để AI giải thích dựa trên nội dung bài (giai đoạn 4)
+  lessonId    String?          @map("lesson_id") @db.Uuid
+  createdById String           @map("created_by_id") @db.Uuid
+  type        QuestionType
+  difficulty  Difficulty
+  content     String
+  explanation String           @default("")
+  source      QuestionSource   @default(MANUAL)
+  status      QuestionStatus   @default(ACTIVE)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+  course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  topic       Topic            @relation(fields: [topicId], references: [id], onDelete: NoAction)
+  lesson      Lesson?          @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  createdBy   User             @relation(fields: [createdById], references: [id])
+  options     QuestionOption[]
+
+  @@index([courseId, status])
+  @@index([topicId, difficulty])
+  @@map("questions")
+}
+
+model QuestionOption {
+  id         String   @id @default(uuid()) @db.Uuid
+  questionId String   @map("question_id") @db.Uuid
+  content    String
+  // Không bao giờ gửi xuống client khi đang ôn tập/thi
+  isCorrect  Boolean  @map("is_correct")
+  position   Int
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@map("question_options")
 }

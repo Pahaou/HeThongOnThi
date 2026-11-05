@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { CoursesModule } from './courses/courses.module';
 import { PathsModule } from './paths/paths.module';
+import { QuestionsModule } from './questions/questions.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { PrismaModule } from './prisma/prisma.module';
@@ -21,6 +22,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     CoursesModule,
     PathsModule,
+    QuestionsModule,
   ],
   controllers: [AppController],
   providers: [

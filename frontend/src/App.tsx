@@ -11,6 +11,7 @@ import { CourseEditorPage } from './pages/manage/CourseEditorPage'
 import { ManageCoursesPage } from './pages/manage/ManageCoursesPage'
 import { ManagePathsPage } from './pages/manage/ManagePathsPage'
 import { PathEditorPage } from './pages/manage/PathEditorPage'
+import { QuestionBankPage } from './pages/manage/QuestionBankPage'
 import { MyCoursesPage } from './pages/MyCoursesPage'
 import { PathDetailPage } from './pages/PathDetailPage'
 import { PathsPage } from './pages/PathsPage'
@@ -89,6 +90,14 @@ function App() {
               element={
                 <RequireAuth roles={['INSTRUCTOR', 'ADMIN']}>
                   <CourseEditorPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/manage/courses/:id/questions"
+              element={
+                <RequireAuth roles={['INSTRUCTOR', 'ADMIN']}>
+                  <QuestionBankPage />
                 </RequireAuth>
               }
             />
