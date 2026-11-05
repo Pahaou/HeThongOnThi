@@ -118,18 +118,20 @@ erDiagram
     topics {
         uuid id PK
         uuid course_id FK
-        string name
+        string name "duy nhất trong một khóa"
     }
     questions {
         uuid id PK
-        uuid topic_id FK
+        uuid course_id FK
+        uuid topic_id FK "không xóa được chủ đề còn câu hỏi"
         uuid lesson_id FK "bài học liên quan, dùng cho AI giải thích"
         enum type "SINGLE | MULTIPLE | TRUE_FALSE"
         enum difficulty "EASY | MEDIUM | HARD"
         text content
         text explanation
         enum source "MANUAL | IMPORT | AI"
-        enum status "DRAFT | ACTIVE | ARCHIVED"
+        enum status "DRAFT (AI chờ duyệt) | ACTIVE | ARCHIVED"
+        uuid created_by_id FK
     }
     question_options {
         uuid id PK
