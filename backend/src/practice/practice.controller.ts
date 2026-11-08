@@ -1,6 +1,9 @@
 import {
   Body,
   Controller,
+  DefaultValuePipe,
+  ParseBoolPipe,
+  Query,
   Delete,
   Get,
   HttpCode,
@@ -22,15 +25,42 @@ import {
   PublishBlueprintDto,
   StartMockDto,
   StartTopicPracticeDto,
+  StartWrongPracticeDto,
 } from './dto/practice.dto';
 import { PracticeService } from './practice.service';
+import { StatsService } from './stats.service';
 
 const Id = (name = 'id') => Param(name, ParseUUIDPipe);
 
 /** Học viên ôn tập và thi thử. */
 @Controller()
 export class PracticeController {
-  constructor(private readonly practice: PracticeService) {}
+  constructor(
+    private readonly practice: PracticeService,
+    private readonly stats: StatsService,
+  ) {}
+
+  @Get('courses/:courseId/stats')
+  overview(@CurrentUser() user: JwtPayload, @Id('courseId') courseId: string) {
+    return this.stats.overview(user, courseId);
+  }
+
+  @Get('courses/:courseId/wrong-questions')
+  wrongQuestions(
+    @CurrentUser() user: JwtPayload,
+    @Id('courseId') courseId: string,
+    @Query('all', new DefaultValuePipe(false), ParseBoolPipe) all: boolean,
+  ) {
+    return this.stats.wrongQuestions(user, courseId, all);
+  }
+
+  @Post('practice/wrong')
+  startWrong(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: StartWrongPracticeDto,
+  ) {
+    return this.practice.startWrong(user, dto);
+  }
 
   @Get('courses/:courseId/practice-options')
   options(@CurrentUser() user: JwtPayload, @Id('courseId') courseId: string) {

@@ -97,6 +97,14 @@ export function PracticeHomePage() {
           </p>
           <h1>Ôn tập và thi thử</h1>
         </div>
+        <div className="row">
+          <Link className="button secondary" to={`/courses/${course.slug}/stats`}>
+            Năng lực của tôi
+          </Link>
+          <Link className="button secondary" to={`/courses/${course.slug}/wrong`}>
+            Sổ tay câu sai
+          </Link>
+        </div>
       </div>
       {error && <p className="error">{error}</p>}
 

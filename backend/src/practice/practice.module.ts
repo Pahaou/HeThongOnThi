@@ -5,9 +5,10 @@ import {
   PracticeController,
 } from './practice.controller';
 import { PracticeService } from './practice.service';
+import { StatsService } from './stats.service';
 
 @Module({
   controllers: [PracticeController, BlueprintsController],
-  providers: [PracticeService, BlueprintsService],
+  providers: [PracticeService, BlueprintsService, StatsService],
 })
 export class PracticeModule {}

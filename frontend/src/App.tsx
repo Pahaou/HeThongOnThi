@@ -19,6 +19,8 @@ import { PathsPage } from './pages/PathsPage'
 import { PracticeHomePage } from './pages/PracticeHomePage'
 import { PracticePage } from './pages/PracticePage'
 import { RegisterPage } from './pages/RegisterPage'
+import { StatsPage } from './pages/StatsPage'
+import { WrongNotebookPage } from './pages/WrongNotebookPage'
 
 function Header() {
   const { user, logout } = useAuth()
@@ -77,6 +79,22 @@ function App() {
               element={
                 <RequireAuth>
                   <PracticeHomePage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/courses/:slug/stats"
+              element={
+                <RequireAuth>
+                  <StatsPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/courses/:slug/wrong"
+              element={
+                <RequireAuth>
+                  <WrongNotebookPage />
                 </RequireAuth>
               }
             />

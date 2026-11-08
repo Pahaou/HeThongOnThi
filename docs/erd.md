@@ -22,7 +22,6 @@ erDiagram
     questions ||--o{ question_options : has
     users ||--o{ practice_attempts : takes
     practice_attempts ||--o{ practice_answers : has
-    users ||--o{ wrong_notes : keeps
 
     exam_blueprints ||--o{ blueprint_rules : "matrix"
     exams }o--|| exam_blueprints : uses
@@ -163,12 +162,6 @@ erDiagram
         bool is_correct "null = chưa chấm"
         timestamptz answered_at
     }
-    wrong_notes {
-        uuid user_id FK
-        uuid question_id FK
-        int wrong_count
-        timestamptz last_wrong_at
-    }
     exam_blueprints {
         uuid id PK
         uuid course_id FK
@@ -261,6 +254,7 @@ erDiagram
 ```
 
 ## Ghi chú thiết kế
+- **Sổ tay câu sai và thống kê năng lực không có bảng riêng**: tính bằng SQL gộp nhóm trên `practice_answers` đã chấm, nên luôn khớp với lịch sử làm bài. Câu "đã khắc phục" là câu có lần làm gần nhất đúng.
 - **Đề thi được "đóng băng"** vào `attempt_questions` lúc bắt đầu làm bài: sửa ngân hàng câu hỏi sau đó không ảnh hưởng bài đang thi, và chấm lại được.
 - **Server giữ giờ**: client chỉ hiển thị `deadline_at - now`; mọi lần lưu/nộp sau `deadline_at` (cộng một khoảng ân hạn nhỏ cho độ trễ mạng) bị từ chối hoặc tự nộp.
 - **Nộp bài idempotent**: `submissions.idempotency_key` là unique, gửi lại cùng key trả về kết quả cũ.

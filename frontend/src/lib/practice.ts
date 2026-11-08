@@ -83,3 +83,50 @@ export function formatClock(totalSec: number): string {
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
 }
+
+// ---------- Thống kê và sổ tay câu sai ----------
+
+export type MasteryLevel = 'NOT_ENOUGH' | 'WEAK' | 'FAIR' | 'STRONG'
+
+export const LEVEL_LABEL: Record<MasteryLevel, { icon: string; text: string }> = {
+  STRONG: { icon: '▲', text: 'Mạnh' },
+  FAIR: { icon: '●', text: 'Khá' },
+  WEAK: { icon: '▼', text: 'Yếu' },
+  NOT_ENOUGH: { icon: '…', text: 'Chưa đủ dữ liệu' },
+}
+
+export interface StatBucket {
+  answered: number
+  correct: number
+  accuracy: number | null
+  level: MasteryLevel
+}
+
+export interface CourseStats {
+  total: StatBucket
+  byTopic: (StatBucket & { id: string; name: string })[]
+  byDifficulty: (StatBucket & { difficulty: Difficulty })[]
+  mockScores: { id: string; title: string; submittedAt: string; score: number }[]
+}
+
+export interface WrongItem {
+  question: {
+    id: string
+    type: QuestionType
+    difficulty: Difficulty
+    content: string
+    explanation: string
+    topic: { id: string; name: string }
+    options: { id: string; content: string; isCorrect: boolean }[]
+  }
+  wrongCount: number
+  answered: number
+  lastWrongAt: string
+  resolved: boolean
+}
+
+export interface WrongList {
+  unresolvedCount: number
+  resolvedCount: number
+  items: WrongItem[]
+}
