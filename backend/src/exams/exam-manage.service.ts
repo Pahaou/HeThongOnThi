@@ -208,7 +208,8 @@ export class ExamManageService {
   /** Danh sách thí sinh và kết quả; bài quá hạn chưa nộp được chấm luôn. */
   async results(actor: JwtPayload, examId: string) {
     await this.assertExam(actor, examId);
-    await this.grading.gradeExpired(examId);
+    // Tự nộp bài quá hạn và xếp hàng chấm bài bị kẹt của kỳ thi này
+    await this.grading.sweep(examId);
     const candidates = await this.prisma.examCandidate.findMany({
       where: { examId },
       orderBy: { user: { fullName: 'asc' } },

@@ -1,8 +1,15 @@
 import { QuestionType } from '../generated/prisma/client';
 import { isAnswerCorrect } from '../practice/grading';
 
-/** Cho phép trễ vài giây so với hạn để bù độ trễ mạng khi lưu/nộp. */
+/** Câu trả lời chọn trễ tối đa vài giây so với hạn vẫn được tính (bù độ trễ). */
 export const SAVE_GRACE_MS = 5_000;
+
+/**
+ * Sau hạn nộp, server còn nhận đồng bộ thêm một lúc để máy vừa có mạng
+ * lại gửi nốt các câu đã chọn TRƯỚC hạn. Hết khoảng này thì bài bị tự nộp.
+ * Đổi lại, người cố tình sửa giờ máy chỉ lợi tối đa khoảng thời gian này.
+ */
+export const SYNC_GRACE_MS = 60_000;
 
 export type WindowState = 'NOT_OPEN' | 'OPEN' | 'CLOSED';
 
@@ -25,9 +32,27 @@ export function attemptDeadline(
   return new Date(Math.min(byDuration, closesAt.getTime()));
 }
 
-/** Còn được lưu/nộp không (tính cả thời gian ân hạn). */
-export function withinDeadline(deadlineAt: Date, now: Date): boolean {
-  return now.getTime() <= deadlineAt.getTime() + SAVE_GRACE_MS;
+/** Server còn nhận đồng bộ bài không (hạn nộp + thời gian chờ đồng bộ). */
+export function acceptsSync(deadlineAt: Date, now: Date): boolean {
+  return now.getTime() <= deadlineAt.getTime() + SYNC_GRACE_MS;
+}
+
+/** Câu trả lời có được chọn trước hạn không (cho trễ SAVE_GRACE_MS). */
+export function answeredInTime(clientSavedAt: Date, deadlineAt: Date): boolean {
+  return clientSavedAt.getTime() <= deadlineAt.getTime() + SAVE_GRACE_MS;
+}
+
+/**
+ * Thời điểm lưu theo client, không cho vượt giờ server (máy chạy nhanh
+ * hoặc cố tình đặt giờ tương lai để luôn "thắng" khi gộp).
+ */
+export function clampClientTime(clientSavedAt: Date, now: Date): Date {
+  return clientSavedAt > now ? now : clientSavedAt;
+}
+
+/** Bản lưu mới hơn mới được ghi đè, để hàng đợi offline cũ không đè lựa chọn mới. */
+export function isNewer(incoming: Date, existing: Date | null): boolean {
+  return existing === null || incoming > existing;
 }
 
 export interface SnapshotOption {

@@ -7,7 +7,8 @@ import { DIFFICULTY_LABEL } from '../../lib/questions'
 
 function attemptStatus(r: ExamResultRow): string {
   if (!r.attempt) return 'Chưa vào thi'
-  return r.attempt.status === 'SUBMITTED' ? 'Đã nộp' : 'Đang làm'
+  if (r.attempt.status === 'IN_PROGRESS') return 'Đang làm'
+  return r.attempt.status === 'GRADED' ? 'Đã chấm' : 'Đã nộp, đang chấm'
 }
 
 export function ExamDetailPage() {
@@ -50,7 +51,7 @@ export function ExamDetailPage() {
 
   const started = exam.startedCount > 0
   const published = exam.status === 'PUBLISHED'
-  const submittedCount = results.filter((r) => r.attempt?.status === 'SUBMITTED').length
+  const submittedCount = results.filter((r) => r.attempt && r.attempt.status !== 'IN_PROGRESS').length
 
   function onSaveInfo(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()

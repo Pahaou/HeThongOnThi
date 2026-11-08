@@ -17,13 +17,25 @@ import { buildPaper, shuffle } from '../practice/grading';
 import { loadPools, poolKey } from '../practice/question-pool';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExamGradingService } from './exam-grading.service';
+import { AnswerItemDto } from './dto/exam.dto';
 import {
+  acceptsSync,
+  answeredInTime,
   attemptDeadline,
+  clampClientTime,
+  isNewer,
   publicSnapshot,
   QuestionSnapshot,
   windowState,
-  withinDeadline,
 } from './exam-rules';
+
+/** Mã lỗi 409 để client phân biệt và xử lý đúng */
+export const ATTEMPT_SUBMITTED = 'ATTEMPT_SUBMITTED';
+export const SESSION_REPLACED = 'SESSION_REPLACED';
+
+function conflict(code: string, message: string) {
+  return new ConflictException({ statusCode: 409, code, message });
+}
 
 export type MyExamState =
   'NOT_OPEN' | 'OPEN' | 'IN_PROGRESS' | 'SUBMITTED' | 'MISSED' | 'CLOSED';
@@ -55,9 +67,10 @@ export class ExamTakeService {
       const window = windowState(exam, now);
       const closed = window === 'CLOSED';
       let state: MyExamState;
-      if (attempt?.status === ExamAttemptStatus.SUBMITTED) state = 'SUBMITTED';
+      if (attempt && attempt.status !== ExamAttemptStatus.IN_PROGRESS)
+        state = 'SUBMITTED';
       else if (attempt)
-        state = withinDeadline(attempt.deadlineAt, now)
+        state = acceptsSync(attempt.deadlineAt, now)
           ? 'IN_PROGRESS'
           : 'SUBMITTED';
       else state = window === 'OPEN' ? 'OPEN' : closed ? 'MISSED' : 'NOT_OPEN';
@@ -71,15 +84,23 @@ export class ExamTakeService {
         totalQuestions: exam.rules.reduce((s, r) => s + r.count, 0),
         state,
         score: closed && attempt?.score != null ? attempt.score : null,
+        grading: attempt?.status === ExamAttemptStatus.SUBMITTED,
         correctCount: closed ? (attempt?.correctCount ?? null) : null,
       };
     });
   }
 
-  /** Bắt đầu, hoặc vào lại bài đang làm. Đề sinh và đóng băng một lần duy nhất. */
-  async start(user: JwtPayload, examId: string) {
+  /**
+   * Bắt đầu, hoặc vào lại bài đang làm. Đề sinh và đóng băng một lần duy nhất.
+   * Phiên (tab/thiết bị) gọi start trở thành phiên duy nhất được ghi bài;
+   * phiên cũ sẽ nhận lỗi SESSION_REPLACED khi lưu.
+   */
+  async start(user: JwtPayload, examId: string, sessionId: string) {
     const { exam, candidate } = await this.loadCandidate(user, examId);
-    if (candidate.attempt) return this.view(user, examId);
+    if (candidate.attempt) {
+      await this.claimSession(candidate.attempt.id, sessionId);
+      return this.view(user, examId);
+    }
 
     const now = new Date();
     const state = windowState(exam, now);
@@ -108,6 +129,7 @@ export class ExamTakeService {
           candidateId: candidate.id,
           startedAt: now,
           deadlineAt: attemptDeadline(now, exam.durationSec, exam.closesAt),
+          activeSessionId: sessionId,
           totalCount: paper.questionIds.length,
           questions: {
             create: paper.questionIds.map((id, position) => {
@@ -142,8 +164,22 @@ export class ExamTakeService {
       )) {
         throw e;
       }
+      const existing = await this.loadAttempt(user, examId);
+      await this.claimSession(existing.id, sessionId);
     }
     return this.view(user, examId);
+  }
+
+  /** Giành phiên ghi bài; đếm số lần đổi thiết bị để giám thị xem xét. */
+  private async claimSession(attemptId: string, sessionId: string) {
+    await this.prisma.examAttempt.updateMany({
+      where: {
+        id: attemptId,
+        status: ExamAttemptStatus.IN_PROGRESS,
+        activeSessionId: { not: sessionId },
+      },
+      data: { activeSessionId: sessionId, sessionTakeovers: { increment: 1 } },
+    });
   }
 
   async view(user: JwtPayload, examId: string) {
@@ -151,9 +187,9 @@ export class ExamTakeService {
     let attempt = await this.loadAttempt(user, examId);
     if (
       attempt.status === ExamAttemptStatus.IN_PROGRESS &&
-      !withinDeadline(attempt.deadlineAt, new Date())
+      !acceptsSync(attempt.deadlineAt, new Date())
     ) {
-      await this.grading.grade(attempt.id);
+      await this.grading.submit(attempt.id);
       attempt = await this.loadAttempt(user, examId);
     }
 
@@ -174,57 +210,114 @@ export class ExamTakeService {
       // Điểm chỉ công bố khi kỳ thi đã đóng; không bao giờ trả đáp án đúng
       score: closed ? attempt.score : null,
       correctCount: closed ? attempt.correctCount : null,
+      // Đã nộp nhưng hàng đợi chưa chấm xong
+      grading: attempt.status === ExamAttemptStatus.SUBMITTED,
       questions: inProgress
         ? attempt.questions.map((q) => ({
             questionId: q.questionId,
             position: q.position,
             ...publicSnapshot(q.snapshot as unknown as QuestionSnapshot),
             selectedOptionIds: q.selectedOptionIds,
+            clientSavedAt: q.clientSavedAt,
           }))
         : [],
     };
   }
 
-  async save(
+  /**
+   * Lưu theo lô (tự lưu định kỳ, hoặc gửi bù sau khi mất mạng). Mỗi câu chỉ
+   * ghi đè khi bản gửi lên mới hơn bản đang có, và chỉ nhận câu được chọn
+   * trước hạn nộp.
+   */
+  async saveAnswers(
     user: JwtPayload,
     examId: string,
-    questionId: string,
-    selectedOptionIds: string[],
+    sessionId: string,
+    answers: AnswerItemDto[],
   ) {
     const attempt = await this.loadAttempt(user, examId);
     if (attempt.status !== ExamAttemptStatus.IN_PROGRESS) {
-      throw new ConflictException('Bài đã nộp');
+      throw conflict(ATTEMPT_SUBMITTED, 'Bài đã nộp');
     }
-    if (!withinDeadline(attempt.deadlineAt, new Date())) {
-      await this.grading.grade(attempt.id);
-      throw new ConflictException('Đã hết giờ làm bài, bài đã được nộp');
+    if (attempt.activeSessionId !== sessionId) {
+      throw conflict(
+        SESSION_REPLACED,
+        'Bài thi đang được mở ở thiết bị hoặc tab khác',
+      );
     }
-    const question = attempt.questions.find((q) => q.questionId === questionId);
-    if (!question)
-      throw new NotFoundException('Câu hỏi không có trong bài thi');
-    const snapshot = question.snapshot as unknown as QuestionSnapshot;
-    const ids = new Set(snapshot.options.map((o) => o.id));
-    if (selectedOptionIds.some((id) => !ids.has(id))) {
-      throw new BadRequestException('Phương án không thuộc câu hỏi này');
+    const now = new Date();
+    if (!acceptsSync(attempt.deadlineAt, now)) {
+      await this.grading.submit(attempt.id);
+      throw conflict(ATTEMPT_SUBMITTED, 'Đã hết giờ làm bài, bài đã được nộp');
     }
-    if (
-      snapshot.type !== QuestionType.MULTIPLE &&
-      selectedOptionIds.length > 1
-    ) {
-      throw new BadRequestException('Câu này chỉ chọn một phương án');
+
+    const byQuestion = new Map(attempt.questions.map((q) => [q.questionId, q]));
+    for (const a of answers) {
+      const q = byQuestion.get(a.questionId);
+      if (!q) throw new BadRequestException('Câu hỏi không có trong bài thi');
+      const snapshot = q.snapshot as unknown as QuestionSnapshot;
+      const ids = new Set(snapshot.options.map((o) => o.id));
+      if (a.selectedOptionIds.some((id) => !ids.has(id))) {
+        throw new BadRequestException('Phương án không thuộc câu hỏi này');
+      }
+      if (
+        snapshot.type !== QuestionType.MULTIPLE &&
+        a.selectedOptionIds.length > 1
+      ) {
+        throw new BadRequestException('Câu này chỉ chọn một phương án');
+      }
     }
-    const savedAt = new Date();
-    await this.prisma.attemptQuestion.update({
-      where: { attemptId_questionId: { attemptId: attempt.id, questionId } },
-      data: { selectedOptionIds, savedAt },
-    });
-    return { savedAt };
+
+    let saved = 0;
+    let stale = 0;
+    let late = 0;
+    for (const a of answers) {
+      const clientSavedAt = clampClientTime(a.clientSavedAt, now);
+      if (!answeredInTime(clientSavedAt, attempt.deadlineAt)) {
+        late++;
+        continue;
+      }
+      if (
+        !isNewer(clientSavedAt, byQuestion.get(a.questionId)!.clientSavedAt)
+      ) {
+        stale++;
+        continue;
+      }
+      // Điều kiện trong WHERE để hai request đồng thời không ghi đè bản mới hơn
+      const { count } = await this.prisma.attemptQuestion.updateMany({
+        where: {
+          attemptId: attempt.id,
+          questionId: a.questionId,
+          OR: [
+            { clientSavedAt: null },
+            { clientSavedAt: { lt: clientSavedAt } },
+          ],
+        },
+        data: {
+          selectedOptionIds: a.selectedOptionIds,
+          clientSavedAt,
+          savedAt: now,
+        },
+      });
+      if (count === 1) saved++;
+      else stale++;
+    }
+    return { saved, stale, late, serverNow: now };
   }
 
-  /** Nộp bài; gọi lặp vẫn trả về cùng kết quả. */
-  async submit(user: JwtPayload, examId: string) {
+  /** Nộp bài; gọi lặp vẫn trả về cùng kết quả. Việc chấm chạy trong hàng đợi. */
+  async submit(user: JwtPayload, examId: string, sessionId: string) {
     const attempt = await this.loadAttempt(user, examId);
-    await this.grading.grade(attempt.id);
+    if (
+      attempt.status === ExamAttemptStatus.IN_PROGRESS &&
+      attempt.activeSessionId !== sessionId
+    ) {
+      throw conflict(
+        SESSION_REPLACED,
+        'Bài thi đang được mở ở thiết bị hoặc tab khác',
+      );
+    }
+    await this.grading.submit(attempt.id);
     return this.view(user, examId);
   }
 

@@ -21,9 +21,18 @@ jobs:
           --health-cmd "pg_isready -U hton"
           --health-interval 5s
           --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-retries 10
     env:
       DATABASE_URL: postgresql://hton:hton@localhost:5432/hton_test?schema=public
       JWT_ACCESS_SECRET: ci-secret
+      REDIS_URL: redis://localhost:6379
     defaults:
       run:
         working-directory: backend

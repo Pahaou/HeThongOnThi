@@ -204,7 +204,10 @@ erDiagram
         timestamptz started_at "server giữ giờ"
         timestamptz deadline_at "min(bắt đầu + thời lượng, giờ đóng) + gia hạn"
         timestamptz submitted_at
-        enum status "IN_PROGRESS | SUBMITTED"
+        timestamptz graded_at
+        uuid active_session_id "một phiên (tab/thiết bị) được ghi bài"
+        int session_takeovers "số lần đổi thiết bị, cho giám thị"
+        enum status "IN_PROGRESS | SUBMITTED (chờ chấm) | GRADED"
         int total_count
         int correct_count
         float score "chỉ công bố khi kỳ thi đóng"
@@ -215,7 +218,8 @@ erDiagram
         uuid question_id "unique trong một bài"
         jsonb snapshot "câu hỏi + phương án đã xáo + đáp án đúng, đóng băng lúc bắt đầu"
         uuid[] selected_option_ids
-        timestamptz saved_at
+        timestamptz saved_at "giờ server nhận"
+        timestamptz client_saved_at "lúc thí sinh chọn; bản mới hơn thắng khi đồng bộ"
         bool is_correct
     }
     attempt_events {

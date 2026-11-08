@@ -14,6 +14,7 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 
 export class CreateExamDto {
@@ -85,9 +86,31 @@ export class AddCandidatesDto {
   emails!: string[];
 }
 
-export class SaveAnswerDto {
+export class SessionDto {
+  /** Mã ngẫu nhiên của tab đang làm bài */
+  @IsUUID()
+  sessionId!: string;
+}
+
+export class AnswerItemDto {
+  @IsUUID()
+  questionId!: string;
+
   @IsUUID('all', { each: true })
   @ArrayUnique()
   @ArrayMaxSize(8)
   selectedOptionIds!: string[];
+
+  /** Thời điểm thí sinh chọn, theo giờ server đã hiệu chỉnh ở client */
+  @Type(() => Date)
+  @IsDate()
+  clientSavedAt!: Date;
+}
+
+export class SaveAnswersDto extends SessionDto {
+  @ValidateNested({ each: true })
+  @Type(() => AnswerItemDto)
+  @ArrayMinSize(1)
+  @ArrayMaxSize(200)
+  answers!: AnswerItemDto[];
 }

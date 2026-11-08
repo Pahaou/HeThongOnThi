@@ -22,6 +22,7 @@ export interface MyExam {
   state: MyExamState
   score: number | null
   correctCount: number | null
+  grading: boolean
 }
 
 export interface ExamQuestion {
@@ -31,11 +32,14 @@ export interface ExamQuestion {
   content: string
   options: { id: string; content: string }[]
   selectedOptionIds: string[]
+  clientSavedAt: string | null
 }
 
 export interface ExamAttemptView {
   exam: { id: string; title: string; closesAt: string }
-  status: 'IN_PROGRESS' | 'SUBMITTED'
+  status: 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED'
+  /** Đã nộp, hàng đợi chưa chấm xong */
+  grading: boolean
   startedAt: string
   deadlineAt: string
   submittedAt: string | null
@@ -76,7 +80,7 @@ export interface ExamResultRow {
   user: { id: string; email: string; fullName: string }
   verdict: 'VALID' | 'SUSPICIOUS' | 'VIOLATION'
   attempt: {
-    status: 'IN_PROGRESS' | 'SUBMITTED'
+    status: 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED'
     startedAt: string
     deadlineAt: string
     submittedAt: string | null
