@@ -158,6 +158,9 @@ export function CourseEditorPage() {
           <Link className="button secondary" to={`/manage/courses/${course.id}/questions`}>
             Ngân hàng câu hỏi
           </Link>
+          <Link className="button secondary" to={`/manage/courses/${course.id}/exams`}>
+            Kỳ thi
+          </Link>
           <Link className="button secondary" to={`/courses/${course.slug}`}>
             Xem như học viên
           </Link>

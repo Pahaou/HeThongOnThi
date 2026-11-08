@@ -24,11 +24,11 @@ erDiagram
     practice_attempts ||--o{ practice_answers : has
 
     exam_blueprints ||--o{ blueprint_rules : "matrix"
-    exams }o--|| exam_blueprints : uses
+    courses ||--o{ exams : has
+    exams ||--o{ exam_rules : "matrix (chép từ blueprint)"
     exams ||--o{ exam_candidates : lists
     exam_candidates ||--o{ exam_attempts : makes
     exam_attempts ||--o{ attempt_questions : "frozen paper"
-    attempt_questions ||--o| attempt_answers : answered
     exam_attempts ||--o{ attempt_events : logs
     exam_attempts ||--o{ time_extensions : extended
     exam_attempts ||--o{ submissions : "idempotent submit"
@@ -177,13 +177,20 @@ erDiagram
     }
     exams {
         uuid id PK
-        uuid blueprint_id FK
+        uuid course_id FK
+        uuid created_by_id FK
         string title
         timestamptz opens_at
         timestamptz closes_at
         int duration_sec
-        bool shuffle_questions
-        bool shuffle_options
+        bool shuffle_options "câu luôn xáo vì mỗi thí sinh một đề"
+        enum status "DRAFT | PUBLISHED"
+    }
+    exam_rules {
+        uuid exam_id PK
+        uuid topic_id PK
+        enum difficulty PK
+        int count
     }
     exam_candidates {
         uuid id PK
@@ -195,24 +202,21 @@ erDiagram
         uuid id PK
         uuid candidate_id FK
         timestamptz started_at "server giữ giờ"
-        timestamptz deadline_at "started_at + duration + gia hạn"
-        string active_session_id "một phiên hoạt động"
-        enum status "IN_PROGRESS | SUBMITTED | GRADED"
-        float score
-        int version "optimistic lock cho autosave"
+        timestamptz deadline_at "min(bắt đầu + thời lượng, giờ đóng) + gia hạn"
+        timestamptz submitted_at
+        enum status "IN_PROGRESS | SUBMITTED"
+        int total_count
+        int correct_count
+        float score "chỉ công bố khi kỳ thi đóng"
     }
     attempt_questions {
-        uuid id PK
-        uuid attempt_id FK
-        uuid question_id FK
-        int position
-        uuid[] option_order "thứ tự đáp án đã xáo"
-    }
-    attempt_answers {
-        uuid attempt_question_id FK
+        uuid attempt_id PK "PK ghép với position"
+        int position PK
+        uuid question_id "unique trong một bài"
+        jsonb snapshot "câu hỏi + phương án đã xáo + đáp án đúng, đóng băng lúc bắt đầu"
         uuid[] selected_option_ids
-        timestamptz client_saved_at
-        timestamptz server_saved_at
+        timestamptz saved_at
+        bool is_correct
     }
     attempt_events {
         bigint id PK
