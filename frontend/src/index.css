@@ -1299,3 +1299,24 @@ label.choice {
   background: #d7f5dd;
   color: #17692c;
 }
+
+/* ---------- Thông báo trong lúc thi ---------- */
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+}
+
+.banner p {
+  margin: 0;
+  flex: 1;
+  min-width: 240px;
+}
+
+.banner-warn {
+  border-color: #e0a800;
+  background: color-mix(in srgb, #ffc107 14%, var(--surface));
+}

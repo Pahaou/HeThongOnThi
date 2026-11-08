@@ -15,10 +15,13 @@ export interface AuthResponse {
 
 export class ApiError extends Error {
   readonly status: number
+  /** Mã lỗi nghiệp vụ server gửi kèm (vd. SESSION_REPLACED), nếu có */
+  readonly code?: string
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code?: string) {
     super(message)
     this.status = status
+    this.code = code
   }
 }
 
@@ -37,15 +40,17 @@ export function setSessionExpiredHandler(handler: (() => void) | null) {
 
 async function parseError(res: Response): Promise<ApiError> {
   let message = res.statusText
+  let code: string | undefined
   try {
-    const body = (await res.json()) as { message?: string | string[] }
+    const body = (await res.json()) as { message?: string | string[]; code?: string }
     if (body.message) {
       message = Array.isArray(body.message) ? body.message.join(', ') : body.message
     }
+    code = body.code
   } catch {
     // body không phải JSON
   }
-  return new ApiError(res.status, message)
+  return new ApiError(res.status, message, code)
 }
 
 // Gộp các lần refresh đồng thời thành một request. Backend coi việc dùng lại

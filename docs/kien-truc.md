@@ -36,8 +36,11 @@ flowchart LR
 | Triển khai | Docker Compose trên VPS, Nginx/Caddy + HTTPS | Giai đoạn 6 |
 
 ## Luồng làm bài thi (giai đoạn 3)
-1. Thí sinh bấm bắt đầu → server tạo `exam_attempt`, sinh và đóng băng đề, trả câu hỏi **không kèm `is_correct`**.
-2. Client autosave mỗi 5-10 giây; đồng thời ghi IndexedDB. Mất mạng → chỉ ghi IndexedDB, có mạng lại → đồng bộ lên server.
-3. F5 → client lấy bài từ server, gộp với IndexedDB theo `client_saved_at` mới nhất.
-4. Nộp bài kèm `idempotency_key` → đẩy job chấm vào hàng đợi → trả kết quả khi chấm xong.
-5. Hết giờ theo đồng hồ server → server tự nộp với những gì đã lưu.
+1. Thí sinh bấm bắt đầu → server sinh đề theo ma trận và **đóng băng** (chép câu hỏi, phương án đã xáo, đáp án) vào `attempt_questions`; trả câu hỏi **không kèm đáp án**. Tab gọi start trở thành phiên duy nhất được ghi bài (`active_session_id`).
+2. Mỗi lần chọn: ghi ngay vào IndexedDB trên máy rồi gửi lên server (gom 0,4 giây). Câu chưa gửi được thì tự lưu lại mỗi 7 giây và gửi ngay khi trình duyệt báo có mạng (`online`).
+3. Mỗi câu gửi kèm `clientSavedAt` (giờ server đã hiệu chỉnh ở client, bị kẹp không vượt giờ server). Server chỉ ghi khi bản gửi mới hơn bản đang có, nên hàng đợi offline cũ không đè lựa chọn mới.
+4. Hạn nộp = min(bắt đầu + thời lượng, giờ đóng). Sau hạn server còn nhận đồng bộ 60 giây nhưng **chỉ những câu chọn trước hạn** (trễ tối đa 5 giây); quá 60 giây thì tự nộp.
+5. F5 / mở lại trình duyệt → gọi start lấy bài từ server, gộp với IndexedDB theo `clientSavedAt` mới nhất của từng câu rồi gửi bù.
+6. Mở bài ở tab/thiết bị khác → phiên mới giành quyền ghi; phiên cũ nhận 409 `SESSION_REPLACED`, dừng ghi và hiện nút "Tiếp tục làm ở đây". Số lần đổi được đếm cho giám thị.
+7. Nộp bài chỉ đánh dấu `SUBMITTED` rồi đưa job chấm vào hàng đợi BullMQ (Redis); chấm theo đề đóng băng, idempotent (`SUBMITTED → GRADED` đúng một lần).
+8. Job quét mỗi 30 giây: tự nộp bài quá hạn và **xếp hàng lại bài đã nộp mà chưa chấm**, nên server tắt giữa chừng thì bật lại vẫn chấm đủ.

@@ -19,6 +19,7 @@ interface User {
 }
 interface ExamView {
   status: string;
+  grading: boolean;
   deadlineAt: string;
   score: number | null;
   correctCount: number | null;
@@ -105,15 +106,53 @@ describe('Official exams (e2e)', () => {
     return exam.id;
   }
 
-  const start = (examId: string, u = s1) =>
-    http().post(`/api/exams/${examId}/start`).set(as(u));
-  const save = (examId: string, questionId: string, ids: string[], u = s1) =>
+  // Mỗi thí sinh một phiên mặc định (giống một tab trình duyệt)
+  const sessions = new Map<string, string>();
+  const sid = (u: User) => {
+    if (!sessions.has(u.id)) sessions.set(u.id, randomUUID());
+    return sessions.get(u.id)!;
+  };
+  const start = (examId: string, u = s1, sessionId = sid(u)) =>
+    http().post(`/api/exams/${examId}/start`).set(as(u)).send({ sessionId });
+  const save = (
+    examId: string,
+    questionId: string,
+    ids: string[],
+    u = s1,
+    opts: { sessionId?: string; at?: Date } = {},
+  ) =>
     http()
-      .put(`/api/exams/${examId}/attempt/answers/${questionId}`)
+      .put(`/api/exams/${examId}/attempt/answers`)
       .set(as(u))
-      .send({ selectedOptionIds: ids });
-  const submit = (examId: string, u = s1) =>
-    http().post(`/api/exams/${examId}/attempt/submit`).set(as(u));
+      .send({
+        sessionId: opts.sessionId ?? sid(u),
+        answers: [
+          {
+            questionId,
+            selectedOptionIds: ids,
+            clientSavedAt: (opts.at ?? new Date()).toISOString(),
+          },
+        ],
+      });
+  const submit = (examId: string, u = s1, sessionId = sid(u)) =>
+    http()
+      .post(`/api/exams/${examId}/attempt/submit`)
+      .set(as(u))
+      .send({ sessionId });
+  const attemptOf = (examId: string, u = s1) =>
+    prisma.examAttempt.findFirstOrThrow({
+      where: { candidate: { examId, userId: u.id } },
+      include: { questions: true },
+    });
+  /** Chờ hàng đợi chấm xong (worker chạy cùng tiến trình test). */
+  async function waitGraded(examId: string, u = s1) {
+    for (let i = 0; i < 100; i++) {
+      const a = await attemptOf(examId, u);
+      if (a.status === 'GRADED') return a;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    throw new Error('Hàng đợi chưa chấm xong sau 10 giây');
+  }
   const closeNow = (examId: string) =>
     prisma.exam.update({
       where: { id: examId },
@@ -291,13 +330,10 @@ describe('Official exams (e2e)', () => {
     await save(examId, q1.questionId, [right(q1)], s2).expect(404);
 
     const done = (await submit(examId).expect(200)).body as ExamView;
-    expect(done).toMatchObject({
-      status: 'SUBMITTED',
-      score: null,
-      questions: [],
-    });
+    expect(['SUBMITTED', 'GRADED']).toContain(done.status);
+    expect(done).toMatchObject({ score: null, questions: [] });
     const again = (await submit(examId).expect(200)).body as ExamView;
-    expect(again.status).toBe('SUBMITTED');
+    expect(again.status).not.toBe('IN_PROGRESS');
     await save(examId, q1.questionId, [right(q1)]).expect(409);
 
     let mine = (await http().get('/api/exams').set(as(s1))).body as MyExam[];
@@ -306,6 +342,7 @@ describe('Official exams (e2e)', () => {
       score: null,
     });
 
+    await waitGraded(examId);
     await closeNow(examId);
     mine = (await http().get('/api/exams').set(as(s1))).body as MyExam[];
     expect(mine.find((e) => e.id === examId)?.score).toBe(6.67);
@@ -335,6 +372,7 @@ describe('Official exams (e2e)', () => {
     expect(during.questions.every((q) => q.content !== 'Đã sửa')).toBe(true);
 
     await submit(examId).expect(200);
+    await waitGraded(examId);
     await closeNow(examId);
     const result = (
       await http().get(`/api/exams/${examId}/attempt`).set(as(s1))
@@ -365,15 +403,13 @@ describe('Official exams (e2e)', () => {
     ]).expect(200);
     await prisma.examAttempt.updateMany({
       where: { candidate: { examId } },
-      data: { deadlineAt: new Date(Date.now() - MIN) },
+      data: { deadlineAt: new Date(Date.now() - 2 * MIN) },
     });
     await save(examId, q.questionId, [q.options[1].id]).expect(409);
     const after = (await http().get(`/api/exams/${examId}/attempt`).set(as(s1)))
       .body as ExamView;
-    expect(after.status).toBe('SUBMITTED');
-    const attempt = await prisma.examAttempt.findFirstOrThrow({
-      where: { candidate: { examId } },
-    });
+    expect(after.status).not.toBe('IN_PROGRESS');
+    const attempt = await waitGraded(examId);
     expect(attempt.correctCount).toBe(1);
   });
 
@@ -422,5 +458,127 @@ describe('Official exams (e2e)', () => {
       .get(`/api/manage/exams/${examId}/results`)
       .set(as(otherInstructor))
       .expect(403);
+  });
+  it('một phiên: mở ở máy khác thì máy cũ không ghi được nữa, đếm số lần đổi máy', async () => {
+    const examId = await openExam();
+    const view = (await start(examId).expect(200)).body as ExamView;
+    const q = view.questions[0];
+    const deviceB = randomUUID();
+
+    await start(examId, s1, deviceB).expect(200);
+    const blocked = await save(examId, q.questionId, [q.options[0].id]).expect(
+      409,
+    );
+    expect((blocked.body as { code: string }).code).toBe('SESSION_REPLACED');
+    await submit(examId).expect(409);
+
+    await save(examId, q.questionId, [q.options[0].id], s1, {
+      sessionId: deviceB,
+    }).expect(200);
+    // Máy cũ giành lại phiên thì ghi được tiếp
+    await start(examId).expect(200);
+    await save(examId, q.questionId, [q.options[1].id]).expect(200);
+    expect((await attemptOf(examId)).sessionTakeovers).toBe(2);
+  });
+
+  it('đồng bộ: bản lưu cũ đến sau không đè bản mới; giờ client tương lai bị kẹp', async () => {
+    const examId = await openExam();
+    const view = (await start(examId).expect(200)).body as ExamView;
+    const q = view.questions[0];
+    const [first, second] = q.options;
+    const t0 = new Date(Date.now() - 20_000);
+
+    await save(examId, q.questionId, [second.id], s1, {
+      at: new Date(t0.getTime() + 10_000),
+    }).expect(200);
+    // Hàng đợi offline gửi muộn lựa chọn cũ hơn: bị bỏ qua
+    const late = await save(examId, q.questionId, [first.id], s1, {
+      at: t0,
+    }).expect(200);
+    expect(late.body).toMatchObject({ saved: 0, stale: 1 });
+    let row = (await attemptOf(examId)).questions.find(
+      (x) => x.questionId === q.questionId,
+    )!;
+    expect(row.selectedOptionIds).toEqual([second.id]);
+
+    // Máy đặt giờ tương lai: thời điểm lưu bị kẹp về giờ server
+    await save(examId, q.questionId, [first.id], s1, {
+      at: new Date(Date.now() + 3600_000),
+    }).expect(200);
+    row = (await attemptOf(examId)).questions.find(
+      (x) => x.questionId === q.questionId,
+    )!;
+    expect(row.clientSavedAt!.getTime()).toBeLessThanOrEqual(Date.now());
+
+    // Tải lại trang: server trả lựa chọn kèm thời điểm lưu để client gộp
+    const resumed = (await start(examId).expect(200)).body as ExamView & {
+      questions: { clientSavedAt: string | null }[];
+    };
+    expect(
+      resumed.questions.find((x) => x.questionId === q.questionId)
+        ?.clientSavedAt,
+    ).not.toBeNull();
+  });
+
+  it('mất mạng sát giờ: 60 giây sau hạn vẫn nhận câu chọn trước hạn, bỏ câu chọn sau hạn', async () => {
+    const examId = await openExam();
+    const view = (await start(examId).expect(200)).body as ExamView;
+    const [q1, q2] = view.questions;
+    const deadline = new Date(Date.now() - 30_000);
+    await prisma.examAttempt.updateMany({
+      where: { candidate: { examId, userId: s1.id } },
+      data: { deadlineAt: deadline },
+    });
+
+    const res = await http()
+      .put(`/api/exams/${examId}/attempt/answers`)
+      .set(as(s1))
+      .send({
+        sessionId: sid(s1),
+        answers: [
+          // chọn lúc còn mất mạng, trước hạn
+          {
+            questionId: q1.questionId,
+            selectedOptionIds: [q1.options[0].id],
+            clientSavedAt: new Date(deadline.getTime() - 60_000).toISOString(),
+          },
+          // chọn sau hạn
+          {
+            questionId: q2.questionId,
+            selectedOptionIds: [q2.options[0].id],
+            clientSavedAt: new Date().toISOString(),
+          },
+        ],
+      })
+      .expect(200);
+    expect(res.body).toMatchObject({ saved: 1, late: 1 });
+    const rows = (await attemptOf(examId)).questions;
+    expect(
+      rows.find((x) => x.questionId === q1.questionId)?.selectedOptionIds,
+    ).toHaveLength(1);
+    expect(
+      rows.find((x) => x.questionId === q2.questionId)?.selectedOptionIds,
+    ).toEqual([]);
+  });
+
+  it('server tắt sau khi nộp mà chưa kịp chấm: lượt quét đưa lại vào hàng đợi và chấm', async () => {
+    const examId = await openExam();
+    await start(examId).expect(200);
+    // Giả lập: đã đánh dấu nộp nhưng job chấm bị mất (server tắt trước khi xếp hàng)
+    await prisma.examAttempt.updateMany({
+      where: { candidate: { examId, userId: s1.id } },
+      data: {
+        status: 'SUBMITTED',
+        submittedAt: new Date(Date.now() - 2 * MIN),
+      },
+    });
+    // Màn kết quả của giảng viên chạy lượt quét cho kỳ thi này
+    await http()
+      .get(`/api/manage/exams/${examId}/results`)
+      .set(as(instructor))
+      .expect(200);
+    const graded = await waitGraded(examId);
+    expect(graded.score).toBe(0);
+    expect(graded.gradedAt).not.toBeNull();
   });
 });

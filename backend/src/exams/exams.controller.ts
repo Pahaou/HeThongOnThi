@@ -19,7 +19,8 @@ import {
   AddCandidatesDto,
   CreateExamDto,
   PublishExamDto,
-  SaveAnswerDto,
+  SaveAnswersDto,
+  SessionDto,
   UpdateExamDto,
 } from './dto/exam.dto';
 import { ExamManageService } from './exam-manage.service';
@@ -39,8 +40,12 @@ export class ExamsController {
 
   @Post(':id/start')
   @HttpCode(HttpStatus.OK)
-  start(@CurrentUser() user: JwtPayload, @Id() id: string) {
-    return this.take.start(user, id);
+  start(
+    @CurrentUser() user: JwtPayload,
+    @Id() id: string,
+    @Body() dto: SessionDto,
+  ) {
+    return this.take.start(user, id, dto.sessionId);
   }
 
   @Get(':id/attempt')
@@ -48,20 +53,23 @@ export class ExamsController {
     return this.take.view(user, id);
   }
 
-  @Put(':id/attempt/answers/:questionId')
+  @Put(':id/attempt/answers')
   save(
     @CurrentUser() user: JwtPayload,
     @Id() id: string,
-    @Id('questionId') questionId: string,
-    @Body() dto: SaveAnswerDto,
+    @Body() dto: SaveAnswersDto,
   ) {
-    return this.take.save(user, id, questionId, dto.selectedOptionIds);
+    return this.take.saveAnswers(user, id, dto.sessionId, dto.answers);
   }
 
   @Post(':id/attempt/submit')
   @HttpCode(HttpStatus.OK)
-  submit(@CurrentUser() user: JwtPayload, @Id() id: string) {
-    return this.take.submit(user, id);
+  submit(
+    @CurrentUser() user: JwtPayload,
+    @Id() id: string,
+    @Body() dto: SessionDto,
+  ) {
+    return this.take.submit(user, id, dto.sessionId);
   }
 }
 
