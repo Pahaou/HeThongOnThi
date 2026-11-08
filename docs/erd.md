@@ -143,17 +143,25 @@ erDiagram
     practice_attempts {
         uuid id PK
         uuid user_id FK
-        enum mode "TOPIC | MOCK | WEAKNESS"
-        int duration_sec
-        float score
+        uuid course_id FK
+        uuid blueprint_id FK "chỉ có với thi thử"
+        enum mode "TOPIC | MOCK (WEAKNESS ở GĐ4)"
+        string title
         timestamptz started_at
-        timestamptz finished_at
+        timestamptz deadline_at "server giữ giờ thi thử"
+        timestamptz submitted_at "null = đang làm"
+        int total_count
+        int correct_count
+        float score "thang 10"
     }
     practice_answers {
-        uuid attempt_id FK
-        uuid question_id FK
+        uuid attempt_id PK "PK ghép với question_id"
+        uuid question_id PK
+        int position
+        uuid[] option_order "thứ tự phương án đã xáo"
         uuid[] selected_option_ids
-        bool is_correct
+        bool is_correct "null = chưa chấm"
+        timestamptz answered_at
     }
     wrong_notes {
         uuid user_id FK
@@ -164,12 +172,14 @@ erDiagram
     exam_blueprints {
         uuid id PK
         uuid course_id FK
-        string name
+        string title
+        int duration_sec
+        bool published "chỉ công bố khi kho đủ câu"
     }
     blueprint_rules {
-        uuid blueprint_id FK
-        uuid topic_id FK
-        enum difficulty
+        uuid blueprint_id PK "PK ghép (blueprint, topic, difficulty)"
+        uuid topic_id PK
+        enum difficulty PK
         int count
     }
     exams {

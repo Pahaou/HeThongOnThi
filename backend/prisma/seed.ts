@@ -403,6 +403,37 @@ async function seedDemoQuestions(createdById: string) {
   console.log(`Ngân hàng câu hỏi mẫu: ${WEB_QUESTIONS.length} câu`);
 }
 
+/** Đề thi thử mẫu: 6 câu trong 10 phút, đủ câu trong kho mẫu ở trên. */
+async function seedDemoBlueprint() {
+  const course = await prisma.course.findUnique({
+    where: { slug: 'nhap-mon-lap-trinh-web' },
+    include: { topics: true, blueprints: { select: { id: true } } },
+  });
+  if (!course || course.blueprints.length > 0) return;
+  const topic = (name: string) => course.topics.find((t) => t.name === name);
+  const html = topic('HTML');
+  const css = topic('CSS');
+  const http = topic('HTTP');
+  if (!html || !css || !http) return;
+
+  await prisma.examBlueprint.create({
+    data: {
+      courseId: course.id,
+      title: 'Thi thử: Nhập môn lập trình Web',
+      durationSec: 10 * 60,
+      published: true,
+      rules: {
+        create: [
+          { topicId: html.id, difficulty: EASY, count: 2 },
+          { topicId: css.id, difficulty: MEDIUM, count: 2 },
+          { topicId: http.id, difficulty: EASY, count: 2 },
+        ],
+      },
+    },
+  });
+  console.log('Đề thi thử mẫu: 6 câu, 10 phút');
+}
+
 async function main() {
   const adminEmail = (
     process.env.ADMIN_EMAIL ?? 'admin@hton.local'
@@ -426,6 +457,7 @@ async function main() {
   await seedJsCourse(instructor.id);
   await seedDemoPath(instructor.id);
   await seedDemoQuestions(instructor.id);
+  await seedDemoBlueprint();
 
   await upsertUser(
     'hv@hton.local',
