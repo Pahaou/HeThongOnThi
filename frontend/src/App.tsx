@@ -1,4 +1,5 @@
-import { BrowserRouter, Link, NavLink, Route, Routes } from 'react-router'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Link, NavLink, Route, Routes, useLocation } from 'react-router'
 import { useAuth } from './auth/auth-context'
 import { AuthProvider } from './auth/AuthProvider'
 import { RequireAuth } from './auth/RequireAuth'
@@ -19,23 +20,41 @@ import { PathsPage } from './pages/PathsPage'
 import { PracticeHomePage } from './pages/PracticeHomePage'
 import { PracticePage } from './pages/PracticePage'
 import { RegisterPage } from './pages/RegisterPage'
+import { ExamTakePage } from './pages/ExamTakePage'
+import { MyExamsPage } from './pages/MyExamsPage'
+import { ExamDetailPage } from './pages/manage/ExamDetailPage'
+import { ManageExamsPage } from './pages/manage/ManageExamsPage'
 import { StatsPage } from './pages/StatsPage'
 import { WrongNotebookPage } from './pages/WrongNotebookPage'
 
 function Header() {
   const { user, logout } = useAuth()
   const canManage = user?.role === 'INSTRUCTOR' || user?.role === 'ADMIN'
+  // Màn hẹp: menu thu gọn sau nút ☰, chuyển trang thì tự đóng
+  const [open, setOpen] = useState(false)
+  const location = useLocation()
+  useEffect(() => setOpen(false), [location.pathname])
   return (
     <header className="topbar">
       <Link to="/" className="brand">
         HTON
       </Link>
-      <nav>
+      <button
+        className="menu-toggle"
+        aria-expanded={open}
+        aria-controls="main-nav"
+        aria-label={open ? 'Đóng menu' : 'Mở menu'}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {open ? '✕' : '☰'}
+      </button>
+      <nav id="main-nav" className={open ? 'open' : undefined}>
         <NavLink to="/" end>
           Khóa học
         </NavLink>
         <NavLink to="/paths">Lộ trình</NavLink>
         {user && <NavLink to="/my-courses">Khóa học của tôi</NavLink>}
+        {user && <NavLink to="/exams">Kỳ thi</NavLink>}
         {canManage && <NavLink to="/manage">Soạn khóa học</NavLink>}
         {user?.role === 'ADMIN' && <NavLink to="/admin/users">Người dùng</NavLink>}
         {user ? (
@@ -107,6 +126,22 @@ function App() {
               }
             />
             <Route
+              path="/exams"
+              element={
+                <RequireAuth>
+                  <MyExamsPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/exams/:id/take"
+              element={
+                <RequireAuth>
+                  <ExamTakePage />
+                </RequireAuth>
+              }
+            />
+            <Route
               path="/my-courses"
               element={
                 <RequireAuth>
@@ -143,6 +178,22 @@ function App() {
               element={
                 <RequireAuth roles={['INSTRUCTOR', 'ADMIN']}>
                   <BlueprintsPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/manage/courses/:id/exams"
+              element={
+                <RequireAuth roles={['INSTRUCTOR', 'ADMIN']}>
+                  <ManageExamsPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/manage/exams/:id"
+              element={
+                <RequireAuth roles={['INSTRUCTOR', 'ADMIN']}>
+                  <ExamDetailPage />
                 </RequireAuth>
               }
             />

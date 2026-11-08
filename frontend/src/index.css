@@ -1213,3 +1213,89 @@ label.choice {
   cursor: pointer;
   color: var(--primary);
 }
+
+/* ---------- Menu thu gọn trên màn hẹp ---------- */
+.menu-toggle {
+  display: none;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+
+  .topbar nav {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding-top: 8px;
+  }
+
+  .topbar nav.open {
+    display: flex;
+  }
+
+  .topbar nav > a,
+  .topbar nav > span,
+  .topbar nav > button {
+    padding: 12px 4px;
+    border-top: 1px solid var(--border);
+    text-align: left;
+  }
+}
+
+/* ---------- Kỳ thi ---------- */
+.exam-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.exam-card-body {
+  flex: 1;
+  min-width: 240px;
+}
+
+.exam-card-body h2 {
+  margin: 6px 0 4px;
+}
+
+.exam-card-body p {
+  margin: 0;
+}
+
+.exam-score {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.exam-score span {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.badge.state-open,
+.badge.state-in_progress {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--text);
+}
+
+.badge.state-submitted {
+  background: #d7f5dd;
+  color: #17692c;
+}

@@ -29,6 +29,8 @@ model User {
   learningPaths LearningPath[]
   questions     Question[]
   attempts      PracticeAttempt[]
+  examsCreated  Exam[]
+  candidacies   ExamCandidate[]
 
   @@map("users")
 }
@@ -73,6 +75,7 @@ model Course {
   questions    Question[]
   blueprints   ExamBlueprint[]
   attempts     PracticeAttempt[]
+  exams        Exam[]
 
   @@index([instructorId])
   @@index([published])
@@ -221,6 +224,7 @@ model Topic {
   course    Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
   questions Question[]
   rules     BlueprintRule[]
+  examRules ExamRule[]
 
   @@unique([courseId, name])
   @@map("topics")
@@ -342,4 +346,113 @@ model PracticeAnswer {
   @@id([attemptId, questionId])
   @@index([questionId])
   @@map("practice_answers")
+}
+
+enum ExamStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum CandidateVerdict {
+  VALID
+  SUSPICIOUS
+  VIOLATION
+}
+
+enum ExamAttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+}
+
+/**
+ * Kỳ thi chính thức: cửa sổ mở/đóng, thời lượng, ma trận đề chép từ đề thi thử.
+ */
+model Exam {
+  id             String          @id @default(uuid()) @db.Uuid
+  courseId       String          @map("course_id") @db.Uuid
+  createdById    String          @map("created_by_id") @db.Uuid
+  title          String
+  opensAt        DateTime        @map("opens_at") @db.Timestamptz
+  closesAt       DateTime        @map("closes_at") @db.Timestamptz
+  durationSec    Int             @map("duration_sec")
+  shuffleOptions Boolean         @default(true) @map("shuffle_options")
+  status         ExamStatus      @default(DRAFT)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+  course         Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdBy      User            @relation(fields: [createdById], references: [id])
+  rules          ExamRule[]
+  candidates     ExamCandidate[]
+
+  @@index([courseId])
+  @@map("exams")
+}
+
+/**
+ * Ma trận đề đã chép, để sửa đề thi thử gốc không ảnh hưởng kỳ thi.
+ */
+model ExamRule {
+  examId     String     @map("exam_id") @db.Uuid
+  topicId    String     @map("topic_id") @db.Uuid
+  difficulty Difficulty
+  count      Int
+  exam       Exam       @relation(fields: [examId], references: [id], onDelete: Cascade)
+  topic      Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([examId, topicId, difficulty])
+  @@map("exam_rules")
+}
+
+model ExamCandidate {
+  id      String           @id @default(uuid()) @db.Uuid
+  examId  String           @map("exam_id") @db.Uuid
+  userId  String           @map("user_id") @db.Uuid
+  verdict CandidateVerdict @default(VALID)
+  addedAt DateTime         @default(now()) @map("added_at") @db.Timestamptz
+  exam    Exam             @relation(fields: [examId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attempt ExamAttempt?
+
+  @@unique([examId, userId])
+  @@map("exam_candidates")
+}
+
+/**
+ * Mỗi thí sinh một lượt thi; server giữ giờ qua deadlineAt.
+ */
+model ExamAttempt {
+  id           String            @id @default(uuid()) @db.Uuid
+  candidateId  String            @unique @map("candidate_id") @db.Uuid
+  status       ExamAttemptStatus @default(IN_PROGRESS)
+  startedAt    DateTime          @default(now()) @map("started_at") @db.Timestamptz
+  // min(bắt đầu + thời lượng, giờ đóng kỳ thi)
+  deadlineAt   DateTime          @map("deadline_at") @db.Timestamptz
+  submittedAt  DateTime?         @map("submitted_at") @db.Timestamptz
+  totalCount   Int               @map("total_count")
+  correctCount Int?              @map("correct_count")
+  score        Float?
+  candidate    ExamCandidate     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  questions    AttemptQuestion[]
+
+  @@map("exam_attempts")
+}
+
+/**
+ * Đề đã đóng băng: chép nội dung câu hỏi và phương án (kèm đáp án đúng)
+ * lúc bắt đầu, nên sửa ngân hàng câu hỏi không ảnh hưởng bài đang thi.
+ */
+model AttemptQuestion {
+  attemptId         String      @map("attempt_id") @db.Uuid
+  position          Int
+  questionId        String      @map("question_id") @db.Uuid
+  // { type, content, options: [{ id, content, isCorrect }] } theo thứ tự hiển thị
+  snapshot          Json
+  selectedOptionIds String[]    @default([]) @map("selected_option_ids") @db.Uuid
+  savedAt           DateTime?   @map("saved_at") @db.Timestamptz
+  isCorrect         Boolean?    @map("is_correct")
+  attempt           ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@id([attemptId, position])
+  @@unique([attemptId, questionId])
+  @@map("attempt_questions")
 }

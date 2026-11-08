@@ -434,6 +434,38 @@ async function seedDemoBlueprint() {
   console.log('Đề thi thử mẫu: 6 câu, 10 phút');
 }
 
+/** Kỳ thi mẫu đang mở (từ 1 giờ trước tới 7 ngày sau), học viên mẫu là thí sinh. */
+async function seedDemoExam(createdById: string, studentId: string) {
+  const course = await prisma.course.findUnique({
+    where: { slug: 'nhap-mon-lap-trinh-web' },
+    include: { blueprints: { include: { rules: true } }, exams: true },
+  });
+  const blueprint = course?.blueprints[0];
+  if (!course || !blueprint || course.exams.length > 0) return;
+
+  const now = Date.now();
+  await prisma.exam.create({
+    data: {
+      courseId: course.id,
+      createdById,
+      title: 'Thi giữa kỳ (mẫu)',
+      opensAt: new Date(now - 60 * 60 * 1000),
+      closesAt: new Date(now + 7 * 24 * 60 * 60 * 1000),
+      durationSec: 15 * 60,
+      status: 'PUBLISHED',
+      rules: {
+        create: blueprint.rules.map(({ topicId, difficulty, count }) => ({
+          topicId,
+          difficulty,
+          count,
+        })),
+      },
+      candidates: { create: { userId: studentId } },
+    },
+  });
+  console.log('Kỳ thi mẫu: mở 7 ngày, thí sinh hv@hton.local');
+}
+
 async function main() {
   const adminEmail = (
     process.env.ADMIN_EMAIL ?? 'admin@hton.local'
@@ -459,13 +491,14 @@ async function main() {
   await seedDemoQuestions(instructor.id);
   await seedDemoBlueprint();
 
-  await upsertUser(
+  const student = await upsertUser(
     'hv@hton.local',
     'Hocvien@123',
     'Học viên mẫu',
     Role.STUDENT,
   );
   console.log('Học viên mẫu: hv@hton.local');
+  await seedDemoExam(instructor.id, student.id);
 }
 
 main()
