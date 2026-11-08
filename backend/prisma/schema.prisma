@@ -16,18 +16,19 @@ enum Role {
 }
 
 model User {
-  id            String         @id @default(uuid()) @db.Uuid
-  email         String         @unique
-  passwordHash  String         @map("password_hash")
-  fullName      String         @map("full_name")
-  role          Role           @default(STUDENT)
-  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  id            String            @id @default(uuid()) @db.Uuid
+  email         String            @unique
+  passwordHash  String            @map("password_hash")
+  fullName      String            @map("full_name")
+  role          Role              @default(STUDENT)
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz
   refreshTokens RefreshToken[]
   courses       Course[]
   enrollments   Enrollment[]
   learningPaths LearningPath[]
   questions     Question[]
+  attempts      PracticeAttempt[]
 
   @@map("users")
 }
@@ -70,6 +71,8 @@ model Course {
   paths        LearningPathCourse[]
   topics       Topic[]
   questions    Question[]
+  blueprints   ExamBlueprint[]
+  attempts     PracticeAttempt[]
 
   @@index([instructorId])
   @@index([published])
@@ -211,12 +214,13 @@ enum QuestionStatus {
 }
 
 model Topic {
-  id        String     @id @default(uuid()) @db.Uuid
-  courseId  String     @map("course_id") @db.Uuid
+  id        String          @id @default(uuid()) @db.Uuid
+  courseId  String          @map("course_id") @db.Uuid
   name      String
-  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz
-  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  course    Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
   questions Question[]
+  rules     BlueprintRule[]
 
   @@unique([courseId, name])
   @@map("topics")
@@ -242,6 +246,7 @@ model Question {
   lesson      Lesson?          @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   createdBy   User             @relation(fields: [createdById], references: [id])
   options     QuestionOption[]
+  answers     PracticeAnswer[]
 
   @@index([courseId, status])
   @@index([topicId, difficulty])
@@ -259,4 +264,82 @@ model QuestionOption {
 
   @@index([questionId])
   @@map("question_options")
+}
+
+// Ma trận đề thi thử: mỗi quy tắc lấy N câu theo chủ đề + độ khó
+model ExamBlueprint {
+  id          String            @id @default(uuid()) @db.Uuid
+  courseId    String            @map("course_id") @db.Uuid
+  title       String
+  durationSec Int               @map("duration_sec")
+  published   Boolean           @default(false)
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+  course      Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  rules       BlueprintRule[]
+  attempts    PracticeAttempt[]
+
+  @@index([courseId])
+  @@map("exam_blueprints")
+}
+
+model BlueprintRule {
+  blueprintId String        @map("blueprint_id") @db.Uuid
+  topicId     String        @map("topic_id") @db.Uuid
+  difficulty  Difficulty
+  count       Int
+  blueprint   ExamBlueprint @relation(fields: [blueprintId], references: [id], onDelete: Cascade)
+  topic       Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([blueprintId, topicId, difficulty])
+  @@map("blueprint_rules")
+}
+
+enum PracticeMode {
+  // Ôn tập theo chủ đề: trả lời câu nào chấm câu đó, xem giải thích ngay
+  TOPIC
+  // Thi thử theo ma trận: tính giờ, chỉ chấm khi nộp
+  MOCK
+}
+
+model PracticeAttempt {
+  id           String           @id @default(uuid()) @db.Uuid
+  userId       String           @map("user_id") @db.Uuid
+  courseId     String           @map("course_id") @db.Uuid
+  blueprintId  String?          @map("blueprint_id") @db.Uuid
+  mode         PracticeMode
+  title        String
+  startedAt    DateTime         @default(now()) @map("started_at") @db.Timestamptz
+  // Chỉ có với thi thử; server giữ giờ, client chỉ hiển thị
+  deadlineAt   DateTime?        @map("deadline_at") @db.Timestamptz
+  submittedAt  DateTime?        @map("submitted_at") @db.Timestamptz
+  totalCount   Int              @map("total_count")
+  correctCount Int              @default(0) @map("correct_count")
+  // Thang điểm 10, làm tròn 2 chữ số
+  score        Float?
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course       Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  blueprint    ExamBlueprint?   @relation(fields: [blueprintId], references: [id], onDelete: SetNull)
+  answers      PracticeAnswer[]
+
+  @@index([userId, courseId, startedAt])
+  @@map("practice_attempts")
+}
+
+model PracticeAnswer {
+  attemptId         String          @map("attempt_id") @db.Uuid
+  questionId        String          @map("question_id") @db.Uuid
+  position          Int
+  // Thứ tự phương án đã xáo cho lần làm này
+  optionOrder       String[]        @map("option_order") @db.Uuid
+  selectedOptionIds String[]        @default([]) @map("selected_option_ids") @db.Uuid
+  // null = chưa chấm
+  isCorrect         Boolean?        @map("is_correct")
+  answeredAt        DateTime?       @map("answered_at") @db.Timestamptz
+  attempt           PracticeAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question          Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([attemptId, questionId])
+  @@index([questionId])
+  @@map("practice_answers")
 }

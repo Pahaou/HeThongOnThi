@@ -143,6 +143,9 @@ export function QuestionBankPage() {
           <h1>Ngân hàng câu hỏi</h1>
         </div>
         <div className="row">
+          <Link className="button secondary" to={`/manage/courses/${courseId}/blueprints`}>
+            Đề thi thử
+          </Link>
           <button className="secondary" onClick={() => setShowImport((v) => !v)}>
             {showImport ? 'Đóng nhập Excel' : 'Nhập từ Excel'}
           </button>

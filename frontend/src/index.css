@@ -839,3 +839,143 @@ label.choice {
   margin: 0;
   padding-left: 20px;
 }
+
+/* ---------- Ôn tập và thi thử ---------- */
+.practice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.topic-picks {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.blueprint-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.blueprint-row p {
+  margin: 2px 0 0;
+}
+
+.count-input {
+  width: 80px;
+}
+
+.badge.wrong {
+  background: #ffd9d6;
+  color: #9b1c1c;
+}
+
+.exam-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+}
+
+.clock {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.clock.urgent {
+  color: var(--error);
+}
+
+.q-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 16px;
+}
+
+.q-nav a {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.q-nav a.filled {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+.answer-list.pick li {
+  padding: 0;
+}
+
+.answer-list.pick label.choice {
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.answer-list li.chosen {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.answer-list li.wrong {
+  border-color: var(--error);
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+}
+
+.explanation {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.result-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  align-items: center;
+}
+
+.result-box p {
+  margin: 0 0 8px;
+}
+
+.score {
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--primary);
+}
+
+.score span {
+  font-size: 1.5rem;
+  color: var(--muted);
+}
+
+/* Cuộn tới câu hỏi không bị thanh đồng hồ che */
+.question-card[id] {
+  scroll-margin-top: 90px;
+}

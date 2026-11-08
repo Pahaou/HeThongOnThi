@@ -95,7 +95,16 @@ export function CourseDetailPage() {
             label={`Đã học ${enrollment.completedLessonIds.length}/${enrollment.totalLessons} bài (${enrollment.progressPercent}%)`}
           />
         )}
-        {action && <div>{action}</div>}
+        {(action || enrollment || course.canManage) && (
+          <div className="row">
+            {action}
+            {(enrollment || course.canManage) && (
+              <Link className="button secondary" to={`/courses/${course.slug}/practice`}>
+                Ôn tập và thi thử
+              </Link>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="card">

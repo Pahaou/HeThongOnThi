@@ -7,6 +7,7 @@ import { CatalogPage } from './pages/CatalogPage'
 import { CourseDetailPage } from './pages/CourseDetailPage'
 import { LessonPage } from './pages/LessonPage'
 import { LoginPage } from './pages/LoginPage'
+import { BlueprintsPage } from './pages/manage/BlueprintsPage'
 import { CourseEditorPage } from './pages/manage/CourseEditorPage'
 import { ManageCoursesPage } from './pages/manage/ManageCoursesPage'
 import { ManagePathsPage } from './pages/manage/ManagePathsPage'
@@ -15,6 +16,8 @@ import { QuestionBankPage } from './pages/manage/QuestionBankPage'
 import { MyCoursesPage } from './pages/MyCoursesPage'
 import { PathDetailPage } from './pages/PathDetailPage'
 import { PathsPage } from './pages/PathsPage'
+import { PracticeHomePage } from './pages/PracticeHomePage'
+import { PracticePage } from './pages/PracticePage'
 import { RegisterPage } from './pages/RegisterPage'
 
 function Header() {
@@ -70,6 +73,22 @@ function App() {
               }
             />
             <Route
+              path="/courses/:slug/practice"
+              element={
+                <RequireAuth>
+                  <PracticeHomePage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/practice/:id"
+              element={
+                <RequireAuth>
+                  <PracticePage />
+                </RequireAuth>
+              }
+            />
+            <Route
               path="/my-courses"
               element={
                 <RequireAuth>
@@ -98,6 +117,14 @@ function App() {
               element={
                 <RequireAuth roles={['INSTRUCTOR', 'ADMIN']}>
                   <QuestionBankPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/manage/courses/:id/blueprints"
+              element={
+                <RequireAuth roles={['INSTRUCTOR', 'ADMIN']}>
+                  <BlueprintsPage />
                 </RequireAuth>
               }
             />
