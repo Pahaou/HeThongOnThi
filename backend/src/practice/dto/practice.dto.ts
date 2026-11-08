@@ -41,6 +41,16 @@ export class StartTopicPracticeDto {
   count!: number;
 }
 
+export class StartWrongPracticeDto {
+  @IsUUID()
+  courseId!: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PRACTICE_QUESTIONS)
+  count!: number;
+}
+
 export class StartMockDto {
   @IsUUID()
   blueprintId!: string;

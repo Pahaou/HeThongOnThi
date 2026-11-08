@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -15,7 +14,11 @@ import {
   QuestionType,
 } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { StartMockDto, StartTopicPracticeDto } from './dto/practice.dto';
+import {
+  StartMockDto,
+  StartTopicPracticeDto,
+  StartWrongPracticeDto,
+} from './dto/practice.dto';
 import {
   buildPaper,
   isAnswerCorrect,
@@ -23,7 +26,9 @@ import {
   score10,
   shuffle,
 } from './grading';
+import { assertLearner } from './learner-access';
 import { loadPools, poolKey } from './question-pool';
+import { StatsService } from './stats.service';
 
 // Cho phép trễ vài giây so với hạn nộp để bù độ trễ mạng
 const DEADLINE_GRACE_MS = 5_000;
@@ -54,7 +59,10 @@ type AttemptWithAnswers = Prisma.PracticeAttemptGetPayload<{
 
 @Injectable()
 export class PracticeService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly stats: StatsService,
+  ) {}
 
   /** Những gì học viên chọn được để ôn: chủ đề (số câu theo độ khó) và đề thi thử đã công bố. */
   async options(user: JwtPayload, courseId: string) {
@@ -129,6 +137,22 @@ export class PracticeService {
       mode: PracticeMode.TOPIC,
       title,
     });
+    return this.view(user, id);
+  }
+
+  /** Ôn lại các câu từng làm sai mà chưa làm đúng lại. */
+  async startWrong(user: JwtPayload, dto: StartWrongPracticeDto) {
+    await this.assertLearner(user, dto.courseId);
+    const ids = await this.stats.unresolvedWrongIds(user.sub, dto.courseId);
+    if (ids.length === 0) {
+      throw new BadRequestException('Bạn không còn câu sai nào cần ôn lại');
+    }
+    const id = await this.createAttempt(
+      user.sub,
+      dto.courseId,
+      pickRandom(ids, dto.count),
+      { mode: PracticeMode.TOPIC, title: 'Ôn lại câu sai' },
+    );
     return this.view(user, id);
   }
 
@@ -442,18 +466,7 @@ export class PracticeService {
     });
   }
 
-  /** Học viên đã ghi danh, hoặc người quản lý khóa học. */
-  private async assertLearner(user: JwtPayload, courseId: string) {
-    const course = await this.prisma.course.findUnique({
-      where: { id: courseId },
-    });
-    if (!course) throw new NotFoundException('Không tìm thấy khóa học');
-    if (canManageCourse(course, user)) return;
-    const enrollment = await this.prisma.enrollment.findUnique({
-      where: { userId_courseId: { userId: user.sub, courseId } },
-    });
-    if (!enrollment) {
-      throw new ForbiddenException('Bạn cần ghi danh khóa học để ôn tập');
-    }
+  private assertLearner(user: JwtPayload, courseId: string) {
+    return assertLearner(this.prisma, user, courseId);
   }
 }
