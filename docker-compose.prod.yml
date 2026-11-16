@@ -1,0 +1,98 @@
+# Triển khai production trên một VPS. Xem docs/trien-khai.md.
+#   cp .env.prod.example .env.prod   (điền giá trị thật)
+#   docker build -t hton-backend backend && docker build -t hton-web frontend
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+# (Build riêng vì `compose --build` của Compose v5 đòi cấp thêm quyền đọc file.)
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hton}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?đặt POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-hton}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hton}"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+
+  backend:
+    image: hton-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hton}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-hton}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?đặt JWT_ACCESS_SECRET}
+      CORS_ORIGIN: https://${DOMAIN:-localhost}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-20}
+      UPLOAD_DIR: /app/uploads
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@hton.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?đặt ADMIN_PASSWORD}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 10s
+      retries: 6
+
+  web:
+    image: hton-web
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Sao lưu CSDL mỗi ngày vào ./backups, giữ 7 bản gần nhất
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:-hton}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-hton}
+    volumes:
+      - ./backups:/backups
+    entrypoint:
+      - sh
+      - -c
+      - |
+        while true; do
+          f=/backups/hton-$$(date +%Y%m%d-%H%M%S).sql.gz
+          pg_dump | gzip > "$$f.tmp" && mv "$$f.tmp" "$$f" && echo "backup: $$f"
+          ls -1t /backups/hton-*.sql.gz | tail -n +8 | xargs -r rm -f
+          sleep 86400
+        done
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:
+  caddy_data:
+  caddy_config:

@@ -57,6 +57,7 @@ npm run test:e2e    # e2e, cần Postgres đang chạy
 - [ERD](docs/erd.md)
 - [Kiến trúc](docs/kien-truc.md)
 - [Quy ước nhánh và commit](docs/quy-uoc.md)
+- [Triển khai production (Docker, HTTPS, sao lưu, rollback)](docs/trien-khai.md)
 - [Quyết định kiến trúc (ADR)](docs/decisions/)
 - [Hiệu năng và kịch bản sự cố](docs/hieu-nang.md)
 - [Rà soát bảo mật](docs/bao-mat.md)

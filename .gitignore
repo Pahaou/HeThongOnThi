@@ -13,3 +13,6 @@ backend/src/generated/
 backend/uploads/
 backend/loadtest/data.json
 backend/loadtest/results/
+dist-seed/
+backups/
+!.env.prod.example
