@@ -32,6 +32,7 @@ model User {
   examsCreated      Exam[]
   extensionsGranted TimeExtension[]
   candidacies       ExamCandidate[]
+  aiUsages          AiUsage[]
 
   @@map("users")
 }
@@ -232,26 +233,27 @@ model Topic {
 }
 
 model Question {
-  id          String           @id @default(uuid()) @db.Uuid
-  courseId    String           @map("course_id") @db.Uuid
-  topicId     String           @map("topic_id") @db.Uuid
+  id            String           @id @default(uuid()) @db.Uuid
+  courseId      String           @map("course_id") @db.Uuid
+  topicId       String           @map("topic_id") @db.Uuid
   // Bài học liên quan, để AI giải thích dựa trên nội dung bài (giai đoạn 4)
-  lessonId    String?          @map("lesson_id") @db.Uuid
-  createdById String           @map("created_by_id") @db.Uuid
-  type        QuestionType
-  difficulty  Difficulty
-  content     String
-  explanation String           @default("")
-  source      QuestionSource   @default(MANUAL)
-  status      QuestionStatus   @default(ACTIVE)
-  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz
-  course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  topic       Topic            @relation(fields: [topicId], references: [id], onDelete: NoAction)
-  lesson      Lesson?          @relation(fields: [lessonId], references: [id], onDelete: SetNull)
-  createdBy   User             @relation(fields: [createdById], references: [id])
-  options     QuestionOption[]
-  answers     PracticeAnswer[]
+  lessonId      String?          @map("lesson_id") @db.Uuid
+  createdById   String           @map("created_by_id") @db.Uuid
+  type          QuestionType
+  difficulty    Difficulty
+  content       String
+  explanation   String           @default("")
+  source        QuestionSource   @default(MANUAL)
+  status        QuestionStatus   @default(ACTIVE)
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+  course        Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  topic         Topic            @relation(fields: [topicId], references: [id], onDelete: NoAction)
+  lesson        Lesson?          @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  createdBy     User             @relation(fields: [createdById], references: [id])
+  options       QuestionOption[]
+  answers       PracticeAnswer[]
+  aiExplanation AiExplanation?
 
   @@index([courseId, status])
   @@index([topicId, difficulty])
@@ -305,6 +307,8 @@ enum PracticeMode {
   TOPIC
   // Thi thử theo ma trận: tính giờ, chỉ chấm khi nộp
   MOCK
+  // Ôn theo điểm yếu: câu sai chưa khắc phục + chủ đề yếu (giai đoạn 4)
+  WEAKNESS
 }
 
 model PracticeAttempt {
@@ -521,4 +525,48 @@ model AttemptEvent {
 
   @@index([attemptId, clientAt])
   @@map("attempt_events")
+}
+
+enum AiFeature {
+  GENERATE_QUESTIONS
+  EXPLAIN
+  ADVICE
+}
+
+enum AiCallStatus {
+  SUCCESS
+  // AI lỗi/hết giờ/từ chối, đã dùng phương án dự phòng
+  FALLBACK
+  FAILED
+}
+
+/**
+ * Nhật ký mỗi lần gọi AI: dùng để giới hạn số lần/ngày và theo dõi chi phí.
+ */
+model AiUsage {
+  id           String       @id @default(uuid()) @db.Uuid
+  userId       String       @map("user_id") @db.Uuid
+  feature      AiFeature
+  status       AiCallStatus
+  inputTokens  Int          @default(0) @map("input_tokens")
+  outputTokens Int          @default(0) @map("output_tokens")
+  error        String?
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, feature, createdAt])
+  @@map("ai_usages")
+}
+
+/**
+ * Lời giải thích AI cho một câu hỏi, dùng lại cho mọi học viên (tiết kiệm chi phí).
+ */
+model AiExplanation {
+  questionId String   @id @map("question_id") @db.Uuid
+  content    String
+  model      String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("ai_explanations")
 }

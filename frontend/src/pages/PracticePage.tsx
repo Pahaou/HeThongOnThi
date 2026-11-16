@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
+import { AiExplainButton } from '../components/AiExplainButton'
 import { api, ApiError } from '../lib/api'
 import {
   formatClock,
@@ -82,6 +83,7 @@ function QuestionCard({
           <strong>Giải thích:</strong> {question.explanation}
         </p>
       )}
+      {revealed && <AiExplainButton questionId={question.questionId} />}
       {action}
     </article>
   )

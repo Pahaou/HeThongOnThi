@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { CoursesModule } from './courses/courses.module';
+import { AiModule } from './ai/ai.module';
 import { ExamsModule } from './exams/exams.module';
 import { PathsModule } from './paths/paths.module';
 import { PracticeModule } from './practice/practice.module';
@@ -27,6 +28,7 @@ import { UsersModule } from './users/users.module';
     QuestionsModule,
     PracticeModule,
     ExamsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [

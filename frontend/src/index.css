@@ -1358,3 +1358,28 @@ label.choice {
 .proctor-table tr.flagged td {
   background: color-mix(in srgb, var(--error) 7%, transparent);
 }
+
+/* ---------- AI ---------- */
+.badge.ai {
+  background: color-mix(in srgb, #7c3aed 16%, transparent);
+  color: var(--text);
+}
+
+.ai-box {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, #7c3aed 40%, var(--border));
+  background: color-mix(in srgb, #7c3aed 6%, var(--surface));
+}
+
+.ai-box p {
+  margin: 8px 0 0;
+}
+
+.weakness-card {
+  border-left: 4px solid #7c3aed;
+}
+
+.weakness-card p {
+  margin: 0;
+}

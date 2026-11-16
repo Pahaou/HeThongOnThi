@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { WeaknessCard } from '../components/WeaknessCard'
 import { api } from '../lib/api'
 import type { CourseDetail } from '../lib/courses'
 import {
@@ -107,6 +108,8 @@ export function PracticeHomePage() {
         </div>
       </div>
       {error && <p className="error">{error}</p>}
+
+      <WeaknessCard courseId={course.id} />
 
       <div className="practice-grid">
         <form className="card stack" onSubmit={onStartTopic}>

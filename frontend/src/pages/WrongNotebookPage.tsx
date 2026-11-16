@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { AiExplainButton } from '../components/AiExplainButton'
 import { api } from '../lib/api'
 import type { CourseDetail } from '../lib/courses'
 import { formatDateTime, type Attempt, type WrongList } from '../lib/practice'
@@ -108,6 +109,7 @@ export function WrongNotebookPage() {
               <strong>Giải thích:</strong> {q.explanation}
             </p>
           )}
+          <AiExplainButton questionId={q.id} />
         </article>
       ))}
     </section>
