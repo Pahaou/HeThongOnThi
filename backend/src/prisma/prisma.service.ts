@@ -9,6 +9,8 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
     super({
       adapter: new PrismaPg({
         connectionString: config.getOrThrow<string>('DATABASE_URL'),
+        // Mặc định của pg chỉ 10 kết nối: hàng trăm thí sinh vào thi cùng lúc sẽ xếp hàng chờ
+        max: Number(config.get('DB_POOL_SIZE') ?? 20),
       }),
     });
   }

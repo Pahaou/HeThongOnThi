@@ -57,6 +57,9 @@ npm run test:e2e    # e2e, cần Postgres đang chạy
 - [ERD](docs/erd.md)
 - [Kiến trúc](docs/kien-truc.md)
 - [Quy ước nhánh và commit](docs/quy-uoc.md)
+- [Quyết định kiến trúc (ADR)](docs/decisions/)
+- [Hiệu năng và kịch bản sự cố](docs/hieu-nang.md)
+- [Rà soát bảo mật](docs/bao-mat.md)
 
 ## Tính năng AI (Claude API)
 Đặt `ANTHROPIC_API_KEY` trong `backend/.env` để bật (model `claude-opus-5-5`). Không có key, hết lượt, AI lỗi/hết giờ/từ chối thì hệ thống tự dùng phương án dự phòng.

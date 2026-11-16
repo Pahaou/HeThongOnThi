@@ -75,6 +75,8 @@ export class ProctorService implements OnModuleDestroy {
    */
   notify(examId: string, candidateId: string, throttle = false): void {
     if (!this.server || this.closed) return;
+    // Không có giám thị nào đang xem kỳ thi này: khỏi truy vấn dựng dòng
+    if (!this.server.adapter.rooms.get(examRoom(examId))?.size) return;
     const now = Date.now();
     const last = this.lastEmit.get(candidateId) ?? 0;
     if (throttle && now - last < THROTTLE_MS) {
