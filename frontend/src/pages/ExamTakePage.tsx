@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router'
 import { clearLocal, loadLocal, markSynced, saveLocal, type LocalAnswer } from '../lib/answer-store'
 import { api, ApiError } from '../lib/api'
 import type { ExamAttemptView, ExamQuestion } from '../lib/exams'
+import { useExamGuard } from '../lib/exam-guard'
 import { formatClock, formatDateTime } from '../lib/practice'
 import { LETTERS } from '../lib/questions'
 
@@ -47,6 +48,8 @@ export function ExamTakePage() {
   const submitted = useRef(false)
 
   const serverNow = () => Date.now() + clockOffset.current
+  const guard = useExamGuard(id, sessionId.current, view?.status === 'IN_PROGRESS' && !sessionLost, serverNow)
+  const clearGuard = guard.clear
 
   /** Áp trạng thái từ server, gộp với bản lưu trên máy (bản nào chọn sau thắng). */
   const applyServer = useCallback(
@@ -56,6 +59,7 @@ export function ExamTakePage() {
         submitted.current = true
         pending.current.clear()
         setPendingCount(0)
+        clearGuard()
         await clearLocal(id)
         setView(v)
         return
@@ -75,7 +79,7 @@ export function ExamTakePage() {
       setPendingCount(pending.current.size)
       setView({ ...v, questions })
     },
-    [id],
+    [id, clearGuard],
   )
 
   const reload = useCallback(async () => {
@@ -202,6 +206,24 @@ export function ExamTakePage() {
     if (waitingToSubmit && !offline) void submit()
   }, [waitingToSubmit, offline, submit])
 
+  // Hỏi trạng thái định kỳ: nhận hạn nộp mới khi được gia hạn, hoặc biết bài đã bị nộp
+  const inProgress = view?.status === 'IN_PROGRESS'
+  useEffect(() => {
+    if (!inProgress) return
+    const poll = async () => {
+      try {
+        const s = await api<{ status: string; deadlineAt: string; serverNow: string }>(`/exams/${id}/attempt/status`)
+        clockOffset.current = new Date(s.serverNow).getTime() - Date.now()
+        if (s.status !== 'IN_PROGRESS') await reload()
+        else setView((v) => (v && v.deadlineAt !== s.deadlineAt ? { ...v, deadlineAt: s.deadlineAt } : v))
+      } catch {
+        // mất mạng: lần sau hỏi lại
+      }
+    }
+    const timer = setInterval(() => void poll(), 20_000)
+    return () => clearInterval(timer)
+  }, [inProgress, id, reload])
+
   const deadline = view?.status === 'IN_PROGRESS' ? view.deadlineAt : null
   useEffect(() => {
     if (!deadline) return setRemaining(null)
@@ -299,7 +321,7 @@ export function ExamTakePage() {
   function confirmSubmit() {
     const left = view!.totalCount - answered
     const msg = left > 0 ? `Còn ${left} câu chưa làm. Vẫn nộp bài? Nộp rồi không sửa được.` : 'Nộp bài? Nộp rồi không sửa được.'
-    if (confirm(msg)) void submit()
+    if (guard.quietly(() => confirm(msg))) void submit()
   }
 
   let saveText = ''
@@ -311,6 +333,23 @@ export function ExamTakePage() {
     <section className="stack">
       <h1>{view.exam.title}</h1>
 
+      {guard.warning && (
+        <div className="card banner banner-danger" role="alert">
+          <p>
+            <strong>{guard.warning}</strong>
+            {guard.violations > 0 && ` (đã ghi nhận ${guard.violations} lần)`}
+          </p>
+          <button className="secondary" onClick={guard.dismissWarning}>
+            Đã hiểu
+          </button>
+        </div>
+      )}
+      {!guard.fullscreen && !sessionLost && (
+        <div className="card banner" role="status">
+          <p>Hãy làm bài ở chế độ toàn màn hình. Rời trang, chuyển cửa sổ hay copy/paste đều được ghi lại.</p>
+          <button onClick={guard.enterFullscreen}>Vào toàn màn hình</button>
+        </div>
+      )}
       {sessionLost && (
         <div className="card banner banner-warn" role="alert">
           <p>

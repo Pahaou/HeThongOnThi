@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { api } from '../../lib/api'
-import { toLocalInput, type AddCandidatesResult, type ExamResultRow, type ManageExam } from '../../lib/exams'
+import {
+  EVENT_LABEL,
+  toLocalInput,
+  type AddCandidatesResult,
+  type CandidateLog,
+  type ExamResultRow,
+  type ManageExam,
+} from '../../lib/exams'
 import { formatDateTime } from '../../lib/practice'
 import { DIFFICULTY_LABEL } from '../../lib/questions'
 
@@ -19,6 +26,8 @@ export function ExamDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [addResult, setAddResult] = useState<AddCandidatesResult | null>(null)
+  // Nhật ký đang mở của một thí sinh
+  const [logFor, setLogFor] = useState<{ id: string; log: CandidateLog } | null>(null)
 
   const load = useCallback(
     () =>
@@ -68,6 +77,30 @@ export function ExamDetailPage() {
       body.shuffleOptions = form.get('shuffleOptions') === 'on'
     }
     void run(() => api(`/manage/exams/${id}`, { method: 'PATCH', body: JSON.stringify(body) }), 'Đã lưu')
+  }
+
+  async function openLog(candidateId: string) {
+    if (logFor?.id === candidateId) return setLogFor(null)
+    try {
+      setLogFor({ id: candidateId, log: await api<CandidateLog>(`/manage/exams/${id}/candidates/${candidateId}/log`) })
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  function extend(r: ExamResultRow) {
+    const minutes = Number(prompt(`Gia hạn cho ${r.user.fullName} thêm bao nhiêu phút?`, '5'))
+    if (!minutes || minutes < 1) return
+    const reason = prompt('Lý do gia hạn (bắt buộc, vd. mất điện, lỗi máy):')?.trim()
+    if (!reason) return
+    void run(
+      () =>
+        api(`/manage/exams/${id}/candidates/${r.id}/extensions`, {
+          method: 'POST',
+          body: JSON.stringify({ minutes, reason }),
+        }),
+      `Đã gia hạn ${minutes} phút cho ${r.user.fullName}`,
+    )
   }
 
   function onAddCandidates(e: FormEvent<HTMLFormElement>) {
@@ -246,6 +279,7 @@ export function ExamDetailPage() {
                   <th>Bắt đầu</th>
                   <th>Nộp</th>
                   <th>Điểm</th>
+                  <th>Vi phạm</th>
                   <th />
                 </tr>
               </thead>
@@ -273,6 +307,26 @@ export function ExamDetailPage() {
                       )}
                     </td>
                     <td>
+                      {r.attempt ? (
+                        <span className={r.attempt.violationCount > 0 ? 'badge wrong' : 'muted small'}>
+                          {r.attempt.violationCount}
+                          {r.attempt.sessionTakeovers > 0 && ` · đổi máy ${r.attempt.sessionTakeovers}`}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="row tight">
+                      {r.attempt && (
+                        <button className="link" onClick={() => void openLog(r.id)}>
+                          {logFor?.id === r.id ? 'Ẩn nhật ký' : 'Nhật ký'}
+                        </button>
+                      )}
+                      {r.attempt?.status === 'IN_PROGRESS' && (
+                        <button className="link" onClick={() => extend(r)}>
+                          Gia hạn
+                        </button>
+                      )}
                       {!r.attempt && (
                         <button
                           className="link danger"
@@ -290,6 +344,41 @@ export function ExamDetailPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {logFor && (
+          <div className="card stack log-box">
+            <h2>Nhật ký: {logFor.log.user.fullName}</h2>
+            {logFor.log.extensions.length > 0 && (
+              <div>
+                <strong>Gia hạn</strong>
+                <ul>
+                  {logFor.log.extensions.map((e) => (
+                    <li key={e.createdAt}>
+                      {formatDateTime(e.createdAt)}: +{e.minutes} phút, {e.reason}{' '}
+                      <span className="muted small">({e.grantedBy})</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div>
+              <strong>Sự kiện ({logFor.log.events.length})</strong>
+              {logFor.log.events.length === 0 ? (
+                <p className="muted small">Không có sự kiện nào.</p>
+              ) : (
+                <ul className="event-list">
+                  {logFor.log.events.map((e) => (
+                    <li key={e.id}>
+                      <span className="muted small">{new Date(e.clientAt).toLocaleTimeString('vi-VN')}</span>{' '}
+                      {EVENT_LABEL[e.type] ?? e.type}
+                      {e.detail && <span className="muted small"> ({e.detail})</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         )}
       </div>

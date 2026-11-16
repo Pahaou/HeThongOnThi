@@ -18,7 +18,9 @@ import { Role } from '../generated/prisma/client';
 import {
   AddCandidatesDto,
   CreateExamDto,
+  ExtendTimeDto,
   PublishExamDto,
+  RecordEventsDto,
   SaveAnswersDto,
   SessionDto,
   UpdateExamDto,
@@ -60,6 +62,21 @@ export class ExamsController {
     @Body() dto: SaveAnswersDto,
   ) {
     return this.take.saveAnswers(user, id, dto.sessionId, dto.answers);
+  }
+
+  @Get(':id/attempt/status')
+  status(@CurrentUser() user: JwtPayload, @Id() id: string) {
+    return this.take.status(user, id);
+  }
+
+  @Post(':id/attempt/events')
+  @HttpCode(HttpStatus.OK)
+  events(
+    @CurrentUser() user: JwtPayload,
+    @Id() id: string,
+    @Body() dto: RecordEventsDto,
+  ) {
+    return this.take.recordEvents(user, id, dto.events);
   }
 
   @Post(':id/attempt/submit')
@@ -141,6 +158,31 @@ export class ManageExamsController {
     @Id('candidateId') candidateId: string,
   ) {
     return this.manage.removeCandidate(actor, id, candidateId);
+  }
+
+  @Post('exams/:id/candidates/:candidateId/extensions')
+  extend(
+    @CurrentUser() actor: JwtPayload,
+    @Id() id: string,
+    @Id('candidateId') candidateId: string,
+    @Body() dto: ExtendTimeDto,
+  ) {
+    return this.manage.extendTime(
+      actor,
+      id,
+      candidateId,
+      dto.minutes,
+      dto.reason,
+    );
+  }
+
+  @Get('exams/:id/candidates/:candidateId/log')
+  log(
+    @CurrentUser() actor: JwtPayload,
+    @Id() id: string,
+    @Id('candidateId') candidateId: string,
+  ) {
+    return this.manage.candidateLog(actor, id, candidateId);
   }
 
   @Get('exams/:id/results')

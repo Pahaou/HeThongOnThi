@@ -207,6 +207,7 @@ erDiagram
         timestamptz graded_at
         uuid active_session_id "một phiên (tab/thiết bị) được ghi bài"
         int session_takeovers "số lần đổi thiết bị, cho giám thị"
+        int violation_count "cộng dồn sự kiện nghi vấn"
         enum status "IN_PROGRESS | SUBMITTED (chờ chấm) | GRADED"
         int total_count
         int correct_count
@@ -225,9 +226,10 @@ erDiagram
     attempt_events {
         bigint id PK
         uuid attempt_id FK
-        enum type "TAB_HIDDEN | FULLSCREEN_EXIT | COPY | PASTE | RECONNECT | ..."
-        jsonb payload
-        timestamptz at
+        enum type "TAB_HIDDEN | WINDOW_BLUR | FULLSCREEN_EXIT/ENTER | COPY | PASTE | CONTEXT_MENU | SESSION_TAKEOVER | RECONNECT"
+        timestamptz client_at "có thể gửi bù sau khi mất mạng"
+        timestamptz server_at
+        string detail
     }
     time_extensions {
         uuid id PK

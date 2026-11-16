@@ -7,7 +7,11 @@ import {
 } from '@nestjs/common';
 import { JwtPayload } from '../auth/auth.types';
 import { canManageCourse } from '../courses/course-access';
-import { ExamStatus, Role } from '../generated/prisma/client';
+import {
+  ExamAttemptStatus,
+  ExamStatus,
+  Role,
+} from '../generated/prisma/client';
 import { loadPools, poolKey } from '../practice/question-pool';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateExamDto, UpdateExamDto } from './dto/exam.dto';
@@ -224,6 +228,8 @@ export class ExamManageService {
             totalCount: true,
             correctCount: true,
             score: true,
+            violationCount: true,
+            sessionTakeovers: true,
           },
         },
       },
@@ -234,6 +240,83 @@ export class ExamManageService {
       verdict: c.verdict,
       attempt: c.attempt,
     }));
+  }
+
+  /**
+   * Gia hạn cho một thí sinh đang làm bài (vd. mất điện, lỗi máy). Hạn mới
+   * có thể vượt giờ đóng kỳ thi; mỗi lần gia hạn đều ghi lại người cho và lý do.
+   */
+  async extendTime(
+    actor: JwtPayload,
+    examId: string,
+    candidateId: string,
+    minutes: number,
+    reason: string,
+  ) {
+    await this.assertExam(actor, examId);
+    const attempt = await this.prisma.examAttempt.findFirst({
+      where: { candidateId, candidate: { examId } },
+    });
+    if (!attempt) {
+      throw new ConflictException('Thí sinh chưa vào thi, chưa thể gia hạn');
+    }
+    if (attempt.status !== ExamAttemptStatus.IN_PROGRESS) {
+      throw new ConflictException('Thí sinh đã nộp bài, không thể gia hạn');
+    }
+    const extraSec = minutes * 60;
+    const [, rows] = await this.prisma.$transaction([
+      this.prisma.timeExtension.create({
+        data: {
+          attemptId: attempt.id,
+          grantedById: actor.sub,
+          extraSec,
+          reason: reason.trim(),
+        },
+      }),
+      // Cộng trực tiếp trong SQL để hai lần gia hạn đồng thời không mất lần nào
+      this.prisma.$queryRaw<{ deadline_at: Date }[]>`
+        UPDATE exam_attempts
+        SET deadline_at = deadline_at + make_interval(secs => ${extraSec})
+        WHERE id = ${attempt.id}::uuid
+        RETURNING deadline_at`,
+    ]);
+    return { deadlineAt: rows[0].deadline_at };
+  }
+
+  /** Nhật ký một thí sinh: các lần gia hạn và sự kiện khi thi, theo thời gian. */
+  async candidateLog(actor: JwtPayload, examId: string, candidateId: string) {
+    await this.assertExam(actor, examId);
+    const candidate = await this.prisma.examCandidate.findFirst({
+      where: { id: candidateId, examId },
+      include: {
+        user: { select: { fullName: true, email: true } },
+        attempt: {
+          include: {
+            extensions: {
+              orderBy: { createdAt: 'asc' },
+              include: { grantedBy: { select: { fullName: true } } },
+            },
+            events: { orderBy: { clientAt: 'asc' }, take: 500 },
+          },
+        },
+      },
+    });
+    if (!candidate) throw new NotFoundException('Không tìm thấy thí sinh');
+    const a = candidate.attempt;
+    return {
+      user: candidate.user,
+      verdict: candidate.verdict,
+      violationCount: a?.violationCount ?? 0,
+      sessionTakeovers: a?.sessionTakeovers ?? 0,
+      extensions: (a?.extensions ?? []).map((e) => ({
+        minutes: e.extraSec / 60,
+        reason: e.reason,
+        grantedBy: e.grantedBy.fullName,
+        createdAt: e.createdAt,
+      })),
+      // bigint không chuyển JSON được nên đổi id sang chuỗi
+      events: (a?.events ?? []).map((e) => ({ ...e, id: e.id.toString() })),
+    };
   }
 
   // ---------- Hỗ trợ ----------

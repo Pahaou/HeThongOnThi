@@ -1,4 +1,4 @@
-import { QuestionType } from '../generated/prisma/client';
+import { AttemptEventType, QuestionType } from '../generated/prisma/client';
 import { isAnswerCorrect } from '../practice/grading';
 
 /** Câu trả lời chọn trễ tối đa vài giây so với hạn vẫn được tính (bù độ trễ). */
@@ -84,3 +84,14 @@ export function publicSnapshot(snapshot: QuestionSnapshot) {
     options: snapshot.options.map(({ id, content }) => ({ id, content })),
   };
 }
+
+/** Sự kiện tính vào số vi phạm; FULLSCREEN_ENTER, RECONNECT chỉ để tham khảo. */
+export const VIOLATION_EVENTS: ReadonlySet<AttemptEventType> = new Set([
+  AttemptEventType.TAB_HIDDEN,
+  AttemptEventType.WINDOW_BLUR,
+  AttemptEventType.FULLSCREEN_EXIT,
+  AttemptEventType.COPY,
+  AttemptEventType.PASTE,
+  AttemptEventType.CONTEXT_MENU,
+  AttemptEventType.SESSION_TAKEOVER,
+]);
