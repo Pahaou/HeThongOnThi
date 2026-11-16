@@ -197,6 +197,7 @@ erDiagram
         uuid exam_id FK
         uuid user_id FK
         enum verdict "VALID | SUSPICIOUS | VIOLATION"
+        string verdict_note "ghi chú của giám thị"
     }
     exam_attempts {
         uuid id PK
@@ -208,6 +209,7 @@ erDiagram
         uuid active_session_id "một phiên (tab/thiết bị) được ghi bài"
         int session_takeovers "số lần đổi thiết bị, cho giám thị"
         int violation_count "cộng dồn sự kiện nghi vấn"
+        timestamptz last_seen_at "lần cuối máy thí sinh liên lạc, để biết online"
         enum status "IN_PROGRESS | SUBMITTED (chờ chấm) | GRADED"
         int total_count
         int correct_count

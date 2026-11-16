@@ -7,6 +7,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:3000',
+      // WebSocket cho màn giám thị
+      '/socket.io': { target: 'http://localhost:3000', ws: true },
     },
   },
 })

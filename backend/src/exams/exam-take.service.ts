@@ -18,6 +18,7 @@ import { buildPaper, shuffle } from '../practice/grading';
 import { loadPools, poolKey } from '../practice/question-pool';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExamGradingService } from './exam-grading.service';
+import { ProctorService } from './proctor.service';
 import { AnswerItemDto, EventItemDto } from './dto/exam.dto';
 import {
   acceptsSync,
@@ -47,6 +48,7 @@ export class ExamTakeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly grading: ExamGradingService,
+    private readonly proctor: ProctorService,
   ) {}
 
   /** Kỳ thi đã công bố mà mình là thí sinh. Điểm chỉ hiện khi kỳ thi đã đóng. */
@@ -101,6 +103,7 @@ export class ExamTakeService {
     const { exam, candidate } = await this.loadCandidate(user, examId);
     if (candidate.attempt) {
       await this.claimSession(candidate.attempt.id, sessionId);
+      this.proctor.notify(examId, candidate.id);
       return this.view(user, examId);
     }
 
@@ -169,6 +172,7 @@ export class ExamTakeService {
       const existing = await this.loadAttempt(user, examId);
       await this.claimSession(existing.id, sessionId);
     }
+    this.proctor.notify(examId, candidate.id);
     return this.view(user, examId);
   }
 
@@ -317,6 +321,8 @@ export class ExamTakeService {
       if (count === 1) saved++;
       else stale++;
     }
+    await this.touch(attempt.id);
+    this.proctor.notify(examId, attempt.candidateId, true);
     // Trả hạn nộp hiện tại để client cập nhật đồng hồ nếu vừa được gia hạn
     return {
       saved,
@@ -340,7 +346,17 @@ export class ExamTakeService {
       );
     }
     await this.grading.submit(attempt.id);
+    this.proctor.notify(examId, attempt.candidateId);
     return this.view(user, examId);
+  }
+
+  /** Ghi lần cuối máy thí sinh liên lạc, để giám thị biết ai đang online. */
+  private touch(attemptId: string) {
+    return this.prisma.examAttempt.update({
+      where: { id: attemptId },
+      data: { lastSeenAt: new Date() },
+      select: { id: true },
+    });
   }
 
   /**
@@ -367,10 +383,11 @@ export class ExamTakeService {
       }),
       this.prisma.examAttempt.update({
         where: { id: attempt.id },
-        data: { violationCount: { increment: violations } },
+        data: { violationCount: { increment: violations }, lastSeenAt: now },
         select: { violationCount: true },
       }),
     ]);
+    this.proctor.notify(examId, attempt.candidateId);
     return { recorded: events.length, violationCount: updated.violationCount };
   }
 
@@ -378,10 +395,21 @@ export class ExamTakeService {
   async status(user: JwtPayload, examId: string) {
     const attempt = await this.prisma.examAttempt.findFirst({
       where: { candidate: { examId, userId: user.sub } },
-      select: { status: true, deadlineAt: true, violationCount: true },
+      select: {
+        id: true,
+        candidateId: true,
+        status: true,
+        deadlineAt: true,
+        violationCount: true,
+      },
     });
     if (!attempt) throw new NotFoundException('Bạn chưa bắt đầu kỳ thi này');
-    return { ...attempt, serverNow: new Date() };
+    if (attempt.status === ExamAttemptStatus.IN_PROGRESS) {
+      await this.touch(attempt.id);
+      this.proctor.notify(examId, attempt.candidateId, true);
+    }
+    const { id: _id, candidateId: _c, ...rest } = attempt;
+    return { ...rest, serverNow: new Date() };
   }
 
   // ---------- Hỗ trợ ----------

@@ -8,6 +8,7 @@ import {
 import { JwtPayload } from '../auth/auth.types';
 import { canManageCourse } from '../courses/course-access';
 import {
+  CandidateVerdict,
   ExamAttemptStatus,
   ExamStatus,
   Role,
@@ -16,12 +17,14 @@ import { loadPools, poolKey } from '../practice/question-pool';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateExamDto, UpdateExamDto } from './dto/exam.dto';
 import { ExamGradingService } from './exam-grading.service';
+import { ProctorService } from './proctor.service';
 
 @Injectable()
 export class ExamManageService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly grading: ExamGradingService,
+    private readonly proctor: ProctorService,
   ) {}
 
   async list(actor: JwtPayload, courseId: string) {
@@ -280,7 +283,45 @@ export class ExamManageService {
         WHERE id = ${attempt.id}::uuid
         RETURNING deadline_at`,
     ]);
+    this.proctor.notify(examId, candidateId);
     return { deadlineAt: rows[0].deadline_at };
+  }
+
+  /**
+   * Giám thị phân xử: hợp lệ / nghi vấn / vi phạm. Vi phạm thì buộc nộp bài
+   * ngay (vẫn chấm để lưu hồ sơ) và thí sinh không vào lại được.
+   */
+  async setVerdict(
+    actor: JwtPayload,
+    examId: string,
+    candidateId: string,
+    verdict: CandidateVerdict,
+    note?: string,
+  ) {
+    await this.assertExam(actor, examId);
+    const candidate = await this.prisma.examCandidate.findFirst({
+      where: { id: candidateId, examId },
+      include: { attempt: { select: { id: true, status: true } } },
+    });
+    if (!candidate) throw new NotFoundException('Không tìm thấy thí sinh');
+    await this.prisma.examCandidate.update({
+      where: { id: candidateId },
+      data: { verdict, verdictNote: note?.trim() || null },
+    });
+    if (
+      verdict === CandidateVerdict.VIOLATION &&
+      candidate.attempt?.status === ExamAttemptStatus.IN_PROGRESS
+    ) {
+      await this.grading.submit(candidate.attempt.id);
+    }
+    this.proctor.notify(examId, candidateId);
+    return this.proctor.row(candidateId);
+  }
+
+  /** Bảng giám thị ban đầu (sau đó cập nhật qua WebSocket). */
+  async proctorRows(actor: JwtPayload, examId: string) {
+    await this.assertExam(actor, examId);
+    return this.proctor.rows(examId);
   }
 
   /** Nhật ký một thí sinh: các lần gia hạn và sự kiện khi thi, theo thời gian. */

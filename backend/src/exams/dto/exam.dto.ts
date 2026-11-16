@@ -17,7 +17,10 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { AttemptEventType } from '../../generated/prisma/client';
+import {
+  AttemptEventType,
+  CandidateVerdict,
+} from '../../generated/prisma/client';
 
 export class CreateExamDto {
   @IsString()
@@ -161,4 +164,14 @@ export class RecordEventsDto extends SessionDto {
   @ArrayMinSize(1)
   @ArrayMaxSize(50)
   events!: EventItemDto[];
+}
+
+export class VerdictDto {
+  @IsEnum(CandidateVerdict)
+  verdict!: CandidateVerdict;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
 }

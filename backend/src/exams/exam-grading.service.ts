@@ -5,6 +5,7 @@ import { ExamAttemptStatus } from '../generated/prisma/client';
 import { score10 } from '../practice/grading';
 import { PrismaService } from '../prisma/prisma.service';
 import { gradeSnapshot, QuestionSnapshot, SYNC_GRACE_MS } from './exam-rules';
+import { ProctorService } from './proctor.service';
 
 export const GRADING_QUEUE = 'exam-grading';
 export const SWEEP_EVERY_MS = 30_000;
@@ -23,6 +24,7 @@ export class ExamGradingService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue(GRADING_QUEUE) private readonly queue: Queue,
+    private readonly proctor: ProctorService,
   ) {}
 
   async onModuleInit() {
@@ -36,11 +38,20 @@ export class ExamGradingService implements OnModuleInit {
 
   /** Đánh dấu đã nộp (chỉ lần đầu có tác dụng) rồi xếp hàng chấm. */
   async submit(attemptId: string): Promise<void> {
-    await this.prisma.examAttempt.updateMany({
+    const { count } = await this.prisma.examAttempt.updateMany({
       where: { id: attemptId, status: ExamAttemptStatus.IN_PROGRESS },
       data: { status: ExamAttemptStatus.SUBMITTED, submittedAt: new Date() },
     });
     await this.enqueue(attemptId);
+    if (count === 1) await this.notifyProctor(attemptId);
+  }
+
+  private async notifyProctor(attemptId: string) {
+    const a = await this.prisma.examAttempt.findUnique({
+      where: { id: attemptId },
+      select: { candidateId: true, candidate: { select: { examId: true } } },
+    });
+    if (a) this.proctor.notify(a.candidate.examId, a.candidateId);
   }
 
   async enqueue(attemptId: string): Promise<void> {
@@ -60,12 +71,14 @@ export class ExamGradingService implements OnModuleInit {
 
   /** Chấm theo đề đã đóng băng. Chỉ bài SUBMITTED được chấm, đúng một lần. */
   async grade(attemptId: string): Promise<void> {
+    let graded = false;
     await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.examAttempt.updateMany({
         where: { id: attemptId, status: ExamAttemptStatus.SUBMITTED },
         data: { status: ExamAttemptStatus.GRADED, gradedAt: new Date() },
       });
       if (count === 0) return;
+      graded = true;
 
       const questions = await tx.attemptQuestion.findMany({
         where: { attemptId },
@@ -90,6 +103,7 @@ export class ExamGradingService implements OnModuleInit {
         },
       });
     });
+    if (graded) await this.notifyProctor(attemptId);
   }
 
   /**

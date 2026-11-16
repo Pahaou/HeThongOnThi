@@ -135,6 +135,9 @@ export function ExamDetailPage() {
           </p>
         </div>
         <div className="row">
+          <Link className="button secondary" to={`/manage/exams/${id}/proctor`}>
+            Màn giám thị
+          </Link>
           <span className={published ? 'badge ok' : 'badge'}>{published ? 'Đã công bố' : 'Bản nháp'}</span>
           <button
             disabled={published && started}
