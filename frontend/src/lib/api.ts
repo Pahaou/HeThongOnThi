@@ -30,6 +30,11 @@ export class ApiError extends Error {
 let accessToken: string | null = null
 let onSessionExpired: (() => void) | null = null
 
+/** Token hiện tại, dùng cho kết nối WebSocket (gửi trong handshake). */
+export function getAccessToken(): string | null {
+  return accessToken
+}
+
 export function setAccessToken(token: string | null) {
   accessToken = token
 }

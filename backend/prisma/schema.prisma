@@ -407,14 +407,16 @@ model ExamRule {
 }
 
 model ExamCandidate {
-  id      String           @id @default(uuid()) @db.Uuid
-  examId  String           @map("exam_id") @db.Uuid
-  userId  String           @map("user_id") @db.Uuid
-  verdict CandidateVerdict @default(VALID)
-  addedAt DateTime         @default(now()) @map("added_at") @db.Timestamptz
-  exam    Exam             @relation(fields: [examId], references: [id], onDelete: Cascade)
-  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  attempt ExamAttempt?
+  id          String           @id @default(uuid()) @db.Uuid
+  examId      String           @map("exam_id") @db.Uuid
+  userId      String           @map("user_id") @db.Uuid
+  verdict     CandidateVerdict @default(VALID)
+  // Ghi chú của giám thị khi đánh dấu nghi vấn/vi phạm
+  verdictNote String?          @map("verdict_note")
+  addedAt     DateTime         @default(now()) @map("added_at") @db.Timestamptz
+  exam        Exam             @relation(fields: [examId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attempt     ExamAttempt?
 
   @@unique([examId, userId])
   @@map("exam_candidates")
@@ -437,6 +439,8 @@ model ExamAttempt {
   sessionTakeovers Int               @default(0) @map("session_takeovers")
   // Số sự kiện nghi vấn (rời trang, thoát toàn màn hình, copy/paste...)
   violationCount   Int               @default(0) @map("violation_count")
+  // Lần cuối máy thí sinh liên lạc (lưu bài, gửi sự kiện, hỏi trạng thái): biết ai đang online
+  lastSeenAt       DateTime?         @map("last_seen_at") @db.Timestamptz
   totalCount       Int               @map("total_count")
   correctCount     Int?              @map("correct_count")
   score            Float?

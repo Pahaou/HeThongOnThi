@@ -1339,3 +1339,22 @@ label.choice {
   max-height: 320px;
   overflow-y: auto;
 }
+
+/* ---------- Màn giám thị ---------- */
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  vertical-align: middle;
+}
+
+.dot.on {
+  background: #2e9d4a;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #2e9d4a 25%, transparent);
+}
+
+.proctor-table tr.flagged td {
+  background: color-mix(in srgb, var(--error) 7%, transparent);
+}

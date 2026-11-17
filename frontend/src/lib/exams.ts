@@ -125,3 +125,31 @@ export function toLocalInput(iso: string): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
+
+export type Verdict = 'VALID' | 'SUSPICIOUS' | 'VIOLATION'
+
+export const VERDICT_LABEL: Record<Verdict, string> = {
+  VALID: 'Hợp lệ',
+  SUSPICIOUS: 'Nghi vấn',
+  VIOLATION: 'Vi phạm',
+}
+
+export interface ProctorRow {
+  candidateId: string
+  user: { id: string; fullName: string; email: string }
+  verdict: Verdict
+  verdictNote: string | null
+  attempt: {
+    status: 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED'
+    startedAt: string
+    deadlineAt: string
+    submittedAt: string | null
+    totalCount: number
+    answeredCount: number
+    score: number | null
+    violationCount: number
+    sessionTakeovers: number
+    lastSeenAt: string | null
+    online: boolean
+  } | null
+}

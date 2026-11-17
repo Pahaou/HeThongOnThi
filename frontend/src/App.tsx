@@ -24,6 +24,7 @@ import { ExamTakePage } from './pages/ExamTakePage'
 import { MyExamsPage } from './pages/MyExamsPage'
 import { ExamDetailPage } from './pages/manage/ExamDetailPage'
 import { ManageExamsPage } from './pages/manage/ManageExamsPage'
+import { ProctorPage } from './pages/manage/ProctorPage'
 import { StatsPage } from './pages/StatsPage'
 import { WrongNotebookPage } from './pages/WrongNotebookPage'
 
@@ -186,6 +187,14 @@ function App() {
               element={
                 <RequireAuth roles={['INSTRUCTOR', 'ADMIN']}>
                   <ManageExamsPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/manage/exams/:id/proctor"
+              element={
+                <RequireAuth roles={['INSTRUCTOR', 'ADMIN']}>
+                  <ProctorPage />
                 </RequireAuth>
               }
             />

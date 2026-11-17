@@ -6,6 +6,8 @@ import { ExamManageService } from './exam-manage.service';
 import { ExamTakeService } from './exam-take.service';
 import { ExamsController, ManageExamsController } from './exams.controller';
 import { GradingProcessor } from './grading.processor';
+import { ProctorGateway } from './proctor.gateway';
+import { ProctorService } from './proctor.service';
 
 /** "redis://:pass@host:6379/0" -> tùy chọn kết nối cho BullMQ */
 function redisConnection(url: string) {
@@ -37,6 +39,8 @@ function redisConnection(url: string) {
     ExamTakeService,
     ExamGradingService,
     GradingProcessor,
+    ProctorService,
+    ProctorGateway,
   ],
 })
 export class ExamsModule {}

@@ -23,6 +23,7 @@ import {
   RecordEventsDto,
   SaveAnswersDto,
   SessionDto,
+  VerdictDto,
   UpdateExamDto,
 } from './dto/exam.dto';
 import { ExamManageService } from './exam-manage.service';
@@ -183,6 +184,27 @@ export class ManageExamsController {
     @Id('candidateId') candidateId: string,
   ) {
     return this.manage.candidateLog(actor, id, candidateId);
+  }
+
+  @Get('exams/:id/proctor')
+  proctorRows(@CurrentUser() actor: JwtPayload, @Id() id: string) {
+    return this.manage.proctorRows(actor, id);
+  }
+
+  @Patch('exams/:id/candidates/:candidateId/verdict')
+  verdict(
+    @CurrentUser() actor: JwtPayload,
+    @Id() id: string,
+    @Id('candidateId') candidateId: string,
+    @Body() dto: VerdictDto,
+  ) {
+    return this.manage.setVerdict(
+      actor,
+      id,
+      candidateId,
+      dto.verdict,
+      dto.note,
+    );
   }
 
   @Get('exams/:id/results')
