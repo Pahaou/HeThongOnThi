@@ -87,7 +87,30 @@ export interface ExamResultRow {
     totalCount: number
     correctCount: number | null
     score: number | null
+    violationCount: number
+    sessionTakeovers: number
   } | null
+}
+
+export const EVENT_LABEL: Record<string, string> = {
+  TAB_HIDDEN: 'Rời khỏi trang thi',
+  WINDOW_BLUR: 'Chuyển sang cửa sổ khác',
+  FULLSCREEN_EXIT: 'Thoát toàn màn hình',
+  FULLSCREEN_ENTER: 'Vào toàn màn hình',
+  COPY: 'Sao chép',
+  PASTE: 'Dán',
+  CONTEXT_MENU: 'Chuột phải',
+  SESSION_TAKEOVER: 'Mở bài ở thiết bị/tab khác',
+  RECONNECT: 'Kết nối lại',
+}
+
+export interface CandidateLog {
+  user: { fullName: string; email: string }
+  verdict: 'VALID' | 'SUSPICIOUS' | 'VIOLATION'
+  violationCount: number
+  sessionTakeovers: number
+  extensions: { minutes: number; reason: string; grantedBy: string; createdAt: string }[]
+  events: { id: string; type: string; clientAt: string; detail: string | null }[]
 }
 
 export interface AddCandidatesResult {

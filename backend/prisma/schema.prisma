@@ -16,21 +16,22 @@ enum Role {
 }
 
 model User {
-  id            String            @id @default(uuid()) @db.Uuid
-  email         String            @unique
-  passwordHash  String            @map("password_hash")
-  fullName      String            @map("full_name")
-  role          Role              @default(STUDENT)
-  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz
-  refreshTokens RefreshToken[]
-  courses       Course[]
-  enrollments   Enrollment[]
-  learningPaths LearningPath[]
-  questions     Question[]
-  attempts      PracticeAttempt[]
-  examsCreated  Exam[]
-  candidacies   ExamCandidate[]
+  id                String            @id @default(uuid()) @db.Uuid
+  email             String            @unique
+  passwordHash      String            @map("password_hash")
+  fullName          String            @map("full_name")
+  role              Role              @default(STUDENT)
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+  refreshTokens     RefreshToken[]
+  courses           Course[]
+  enrollments       Enrollment[]
+  learningPaths     LearningPath[]
+  questions         Question[]
+  attempts          PracticeAttempt[]
+  examsCreated      Exam[]
+  extensionsGranted TimeExtension[]
+  candidacies       ExamCandidate[]
 
   @@map("users")
 }
@@ -434,11 +435,15 @@ model ExamAttempt {
   // Mỗi lượt chỉ một phiên (tab/thiết bị) được ghi bài; mở máy khác thì giành phiên
   activeSessionId  String?           @map("active_session_id") @db.Uuid
   sessionTakeovers Int               @default(0) @map("session_takeovers")
+  // Số sự kiện nghi vấn (rời trang, thoát toàn màn hình, copy/paste...)
+  violationCount   Int               @default(0) @map("violation_count")
   totalCount       Int               @map("total_count")
   correctCount     Int?              @map("correct_count")
   score            Float?
   candidate        ExamCandidate     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   questions        AttemptQuestion[]
+  extensions       TimeExtension[]
+  events           AttemptEvent[]
 
   @@index([status, deadlineAt])
   @@map("exam_attempts")
@@ -464,4 +469,52 @@ model AttemptQuestion {
   @@id([attemptId, position])
   @@unique([attemptId, questionId])
   @@map("attempt_questions")
+}
+
+/**
+ * Gia hạn giờ cho một thí sinh, bắt buộc có lý do để tra cứu sau.
+ */
+model TimeExtension {
+  id          String      @id @default(uuid()) @db.Uuid
+  attemptId   String      @map("attempt_id") @db.Uuid
+  grantedById String      @map("granted_by_id") @db.Uuid
+  extraSec    Int         @map("extra_sec")
+  reason      String
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  attempt     ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  grantedBy   User        @relation(fields: [grantedById], references: [id])
+
+  @@index([attemptId])
+  @@map("time_extensions")
+}
+
+enum AttemptEventType {
+  TAB_HIDDEN
+  WINDOW_BLUR
+  FULLSCREEN_EXIT
+  COPY
+  PASTE
+  CONTEXT_MENU
+  // Ghi ở server khi bài được mở ở tab/thiết bị khác
+  SESSION_TAKEOVER
+  // Chỉ để tham khảo, không tính vi phạm
+  FULLSCREEN_ENTER
+  RECONNECT
+}
+
+/**
+ * Nhật ký sự kiện khi thi (chống gian lận lớp 1). Bảng ghi nhiều nhất nên dùng bigint.
+ */
+model AttemptEvent {
+  id        BigInt           @id @default(autoincrement())
+  attemptId String           @map("attempt_id") @db.Uuid
+  type      AttemptEventType
+  // Lúc xảy ra theo giờ server đã hiệu chỉnh ở client (có thể gửi bù sau khi mất mạng)
+  clientAt  DateTime         @map("client_at") @db.Timestamptz
+  serverAt  DateTime         @default(now()) @map("server_at") @db.Timestamptz
+  detail    String?
+  attempt   ExamAttempt      @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId, clientAt])
+  @@map("attempt_events")
 }

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { JwtPayload } from '../auth/auth.types';
 import {
+  AttemptEventType,
   CandidateVerdict,
   ExamAttemptStatus,
   ExamStatus,
@@ -17,7 +18,7 @@ import { buildPaper, shuffle } from '../practice/grading';
 import { loadPools, poolKey } from '../practice/question-pool';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExamGradingService } from './exam-grading.service';
-import { AnswerItemDto } from './dto/exam.dto';
+import { AnswerItemDto, EventItemDto } from './dto/exam.dto';
 import {
   acceptsSync,
   answeredInTime,
@@ -26,6 +27,7 @@ import {
   isNewer,
   publicSnapshot,
   QuestionSnapshot,
+  VIOLATION_EVENTS,
   windowState,
 } from './exam-rules';
 
@@ -172,14 +174,27 @@ export class ExamTakeService {
 
   /** Giành phiên ghi bài; đếm số lần đổi thiết bị để giám thị xem xét. */
   private async claimSession(attemptId: string, sessionId: string) {
-    await this.prisma.examAttempt.updateMany({
+    const { count } = await this.prisma.examAttempt.updateMany({
       where: {
         id: attemptId,
         status: ExamAttemptStatus.IN_PROGRESS,
         activeSessionId: { not: sessionId },
       },
-      data: { activeSessionId: sessionId, sessionTakeovers: { increment: 1 } },
+      data: {
+        activeSessionId: sessionId,
+        sessionTakeovers: { increment: 1 },
+        violationCount: { increment: 1 },
+      },
     });
+    if (count === 1) {
+      await this.prisma.attemptEvent.create({
+        data: {
+          attemptId,
+          type: AttemptEventType.SESSION_TAKEOVER,
+          clientAt: new Date(),
+        },
+      });
+    }
   }
 
   async view(user: JwtPayload, examId: string) {
@@ -302,7 +317,14 @@ export class ExamTakeService {
       if (count === 1) saved++;
       else stale++;
     }
-    return { saved, stale, late, serverNow: now };
+    // Trả hạn nộp hiện tại để client cập nhật đồng hồ nếu vừa được gia hạn
+    return {
+      saved,
+      stale,
+      late,
+      serverNow: now,
+      deadlineAt: attempt.deadlineAt,
+    };
   }
 
   /** Nộp bài; gọi lặp vẫn trả về cùng kết quả. Việc chấm chạy trong hàng đợi. */
@@ -319,6 +341,47 @@ export class ExamTakeService {
     }
     await this.grading.submit(attempt.id);
     return this.view(user, examId);
+  }
+
+  /**
+   * Ghi sự kiện chống gian lận (gửi theo lô, kể cả gửi bù sau khi mất mạng).
+   * Chỉ nhận khi bài đang làm; số vi phạm cộng dồn để giám thị xem nhanh.
+   */
+  async recordEvents(user: JwtPayload, examId: string, events: EventItemDto[]) {
+    const attempt = await this.loadAttempt(user, examId);
+    if (attempt.status !== ExamAttemptStatus.IN_PROGRESS) {
+      return { recorded: 0, violationCount: attempt.violationCount };
+    }
+    const now = new Date();
+    const violations = events.filter((e) =>
+      VIOLATION_EVENTS.has(e.type),
+    ).length;
+    const [, updated] = await this.prisma.$transaction([
+      this.prisma.attemptEvent.createMany({
+        data: events.map((e) => ({
+          attemptId: attempt.id,
+          type: e.type,
+          clientAt: clampClientTime(e.clientAt, now),
+          detail: e.detail,
+        })),
+      }),
+      this.prisma.examAttempt.update({
+        where: { id: attempt.id },
+        data: { violationCount: { increment: violations } },
+        select: { violationCount: true },
+      }),
+    ]);
+    return { recorded: events.length, violationCount: updated.violationCount };
+  }
+
+  /** Trạng thái gọn để client hỏi định kỳ: hạn nộp có thể đã được gia hạn. */
+  async status(user: JwtPayload, examId: string) {
+    const attempt = await this.prisma.examAttempt.findFirst({
+      where: { candidate: { examId, userId: user.sub } },
+      select: { status: true, deadlineAt: true, violationCount: true },
+    });
+    if (!attempt) throw new NotFoundException('Bạn chưa bắt đầu kỳ thi này');
+    return { ...attempt, serverNow: new Date() };
   }
 
   // ---------- Hỗ trợ ----------
