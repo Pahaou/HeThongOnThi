@@ -246,6 +246,12 @@ describe('Exam integrity: extensions & events (e2e)', () => {
       'SESSION_TAKEOVER',
     ]);
 
+    // Tab cũ ở máy đã bị thay vẫn gửi sự kiện: không tính vi phạm
+    const stale = await sendEvents(examId, [
+      { type: 'TAB_HIDDEN', clientAt: at },
+    ]).expect(200);
+    expect(stale.body).toEqual({ recorded: 0, violationCount: 3 });
+
     await prisma.examAttempt.updateMany({
       where: { candidateId },
       data: { status: 'SUBMITTED', submittedAt: new Date() },

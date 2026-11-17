@@ -268,6 +268,11 @@ describe('AI features (e2e, AI giả)', () => {
       { buffer: pdf, name: 'bai.pdf' },
     ).expect(201);
     expect(fake.lastGenerate?.pdfBase64).toBe(pdf.toString('base64'));
+    // Có file vẫn phải kiểm tra bài học thuộc khóa này
+    await generate(
+      { topicId, difficulty: 'MEDIUM', count: '2', lessonId: randomUUID() },
+      { buffer: pdf, name: 'bai.pdf' },
+    ).expect(400);
 
     await generate(
       { topicId, difficulty: 'EASY', count: '2' },
@@ -349,6 +354,15 @@ describe('AI features (e2e, AI giả)', () => {
     await explain(instructor).expect(200);
     // Lần sau đọc từ cache, không gọi AI nữa
     expect(fake.calls.explain).toBe(before);
+
+    // Giảng viên sửa câu hỏi: giải thích cũ bị bỏ, lần sau AI giải thích lại
+    await http()
+      .patch(`/api/manage/questions/${questionId}`)
+      .set(as(instructor))
+      .send({ content: 'Thẻ HTML nào tạo liên kết?' })
+      .expect(200);
+    await explain().expect(200);
+    expect(fake.calls.explain).toBe(before + 1);
   });
 
   it('gợi ý ôn theo điểm yếu: chọn câu sai trước, lời khuyên AI, AI lỗi vẫn có lời khuyên dự phòng', async () => {

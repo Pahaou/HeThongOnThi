@@ -5,3 +5,4 @@ loadtest
 coverage
 .env
 src/generated
+dist-seed

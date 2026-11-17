@@ -54,7 +54,10 @@ describe('Security review (e2e)', () => {
       imports: [AppModule],
     }).compile();
     app = moduleRef.createNestApplication();
+    // Như production: một reverse proxy (Caddy) đứng trước backend
+    process.env.TRUST_PROXY = '1';
     setupApp(app);
+    delete process.env.TRUST_PROXY;
     await app.init();
     prisma = app.get(PrismaService);
     studentA = await createUser(Role.STUDENT);
@@ -102,6 +105,18 @@ describe('Security review (e2e)', () => {
     }
     await http().get('/api/ai/status').set(as(studentA)).expect(429);
     await http().get('/api/ai/status').set(as(studentB)).expect(200);
+  });
+
+  it('sau reverse proxy, giới hạn đăng nhập tính theo IP thật của từng người', async () => {
+    const login = (ip: string) =>
+      http()
+        .post('/api/auth/login')
+        .set('X-Forwarded-For', ip)
+        .send({ email: 'khong-co@e2e.local', password: 'Sai@12345' });
+    for (let i = 0; i < 10; i++) await login('203.0.113.1').expect(401);
+    await login('203.0.113.1').expect(429);
+    // Người khác sau cùng proxy không bị chặn theo
+    await login('203.0.113.2').expect(401);
   });
 
   it('học viên không gọi được bất kỳ API quản lý nào', async () => {

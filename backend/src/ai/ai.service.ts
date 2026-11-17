@@ -98,6 +98,16 @@ export class AiService {
     if (!topic)
       throw new BadRequestException('Chủ đề không thuộc khóa học này');
 
+    // Kiểm tra cả khi tải file: lessonId vẫn được gắn vào câu hỏi sinh ra
+    const lesson = dto.lessonId
+      ? await this.prisma.lesson.findFirst({
+          where: { id: dto.lessonId, chapter: { courseId } },
+        })
+      : null;
+    if (dto.lessonId && !lesson) {
+      throw new BadRequestException('Bài học không thuộc khóa học này');
+    }
+
     let text: string | undefined;
     let pdfBase64: string | undefined;
     if (file) {
@@ -106,12 +116,7 @@ export class AiService {
       } else {
         text = file.buffer.toString('utf8');
       }
-    } else if (dto.lessonId) {
-      const lesson = await this.prisma.lesson.findFirst({
-        where: { id: dto.lessonId, chapter: { courseId } },
-      });
-      if (!lesson)
-        throw new BadRequestException('Bài học không thuộc khóa học này');
+    } else if (lesson) {
       text = `${lesson.title}\n\n${lesson.content}`;
     } else if (dto.text?.trim()) {
       text = dto.text;
