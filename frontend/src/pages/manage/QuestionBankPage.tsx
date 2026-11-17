@@ -12,6 +12,7 @@ import {
   type QuestionList,
   type Topic,
 } from '../../lib/questions'
+import { AiGeneratePanel } from './AiGeneratePanel'
 import { ImportPanel } from './ImportPanel'
 import { QuestionForm } from './QuestionForm'
 
@@ -25,11 +26,13 @@ export function QuestionBankPage() {
   // 'new' khi đang thêm câu, hoặc id câu đang sửa
   const [editing, setEditing] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
+  const [showAi, setShowAi] = useState(false)
 
   const topicId = params.get('topic') ?? ''
   const type = params.get('type') ?? ''
   const difficulty = params.get('difficulty') ?? ''
   const q = params.get('q') ?? ''
+  const status = params.get('status') ?? ''
   const page = Math.max(1, Number(params.get('page')) || 1)
 
   function setFilter(key: string, value: string) {
@@ -55,10 +58,11 @@ export function QuestionBankPage() {
     if (type) qs.set('type', type)
     if (difficulty) qs.set('difficulty', difficulty)
     if (q) qs.set('q', q)
+    if (status) qs.set('status', status)
     return api<QuestionList>(`/manage/courses/${courseId}/questions?${qs}`)
       .then(setList)
       .catch((e: Error) => setError(e.message))
-  }, [courseId, topicId, type, difficulty, q, page])
+  }, [courseId, topicId, type, difficulty, q, status, page])
 
   useEffect(() => {
     api<ManageCourse>(`/manage/courses/${courseId}`)
@@ -119,6 +123,15 @@ export function QuestionBankPage() {
     await reloadAll()
   }
 
+  async function approve(question: Question) {
+    try {
+      await api(`/manage/questions/${question.id}`, { method: 'PATCH', body: JSON.stringify({ status: 'ACTIVE' }) })
+      await reloadAll()
+    } catch (err) {
+      setError((err as Error).message)
+    }
+  }
+
   async function deleteQuestion(question: Question) {
     if (!confirm('Xóa câu hỏi này?')) return
     try {
@@ -146,6 +159,9 @@ export function QuestionBankPage() {
           <Link className="button secondary" to={`/manage/courses/${courseId}/blueprints`}>
             Đề thi thử
           </Link>
+          <button className="secondary" onClick={() => setShowAi((v) => !v)} disabled={topics.length === 0}>
+            {showAi ? 'Đóng AI' : '✦ Tạo bằng AI'}
+          </button>
           <button className="secondary" onClick={() => setShowImport((v) => !v)}>
             {showImport ? 'Đóng nhập Excel' : 'Nhập từ Excel'}
           </button>
@@ -157,6 +173,18 @@ export function QuestionBankPage() {
 
       {error && <p className="error">{error}</p>}
       {showImport && <ImportPanel courseId={courseId} onImported={() => void reloadAll()} />}
+      {showAi && (
+        <AiGeneratePanel
+          courseId={courseId}
+          topics={topics}
+          lessons={lessons}
+          onCreated={(n) => {
+            // Chuyển sang danh sách câu chờ duyệt để giảng viên xem ngay
+            if (n > 0) setFilter('status', 'DRAFT')
+            void reloadAll()
+          }}
+        />
+      )}
 
       <div className="bank">
         <aside className="card bank-topics">
@@ -206,6 +234,12 @@ export function QuestionBankPage() {
                   {l}
                 </option>
               ))}
+            </select>
+            <select value={status} onChange={(e) => setFilter('status', e.target.value)} aria-label="Trạng thái">
+              <option value="">Đang dùng và chờ duyệt</option>
+              <option value="DRAFT">Chờ duyệt (AI)</option>
+              <option value="ACTIVE">Đang dùng</option>
+              <option value="ARCHIVED">Lưu trữ</option>
             </select>
             <select value={difficulty} onChange={(e) => setFilter('difficulty', e.target.value)}>
               <option value="">Mọi độ khó</option>
@@ -268,6 +302,7 @@ export function QuestionBankPage() {
                   <span className={`badge diff-${question.difficulty.toLowerCase()}`}>
                     {DIFFICULTY_LABEL[question.difficulty]}
                   </span>
+                  {question.status === 'DRAFT' && <span className="badge wrong">Chờ duyệt</span>}
                   {question.source !== 'MANUAL' && (
                     <span className="badge">{SOURCE_LABEL[question.source]}</span>
                   )}
@@ -286,6 +321,9 @@ export function QuestionBankPage() {
                 )}
                 {question.lesson && <p className="muted small">Bài học: {question.lesson.title}</p>}
                 <div className="row tight">
+                  {question.status === 'DRAFT' && (
+                    <button onClick={() => void approve(question)}>Duyệt</button>
+                  )}
                   <button className="link" onClick={() => setEditing(question.id)}>
                     Sửa
                   </button>

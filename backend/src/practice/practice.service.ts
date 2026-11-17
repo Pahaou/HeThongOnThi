@@ -140,6 +140,25 @@ export class PracticeService {
     return this.view(user, id);
   }
 
+  /** Bài ôn theo điểm yếu với danh sách câu đã chọn sẵn (module AI chọn câu). */
+  async startWeakness(
+    user: JwtPayload,
+    courseId: string,
+    questionIds: string[],
+  ) {
+    await this.assertLearner(user, courseId);
+    if (questionIds.length === 0) {
+      throw new BadRequestException(
+        'Chưa có câu nào phù hợp để ôn theo điểm yếu',
+      );
+    }
+    const id = await this.createAttempt(user.sub, courseId, questionIds, {
+      mode: PracticeMode.WEAKNESS,
+      title: 'Ôn theo điểm yếu',
+    });
+    return this.view(user, id);
+  }
+
   /** Ôn lại các câu từng làm sai mà chưa làm đúng lại. */
   async startWrong(user: JwtPayload, dto: StartWrongPracticeDto) {
     await this.assertLearner(user, dto.courseId);
@@ -417,14 +436,14 @@ export class PracticeService {
       serverNow: new Date(),
       totalCount: attempt.totalCount,
       correctCount:
-        submitted || attempt.mode === PracticeMode.TOPIC
+        submitted || attempt.mode !== PracticeMode.MOCK
           ? attempt.correctCount
           : null,
       score: attempt.score,
       questions: attempt.answers.map((a) => {
         const q = a.question;
         const revealed =
-          submitted || (attempt.mode === PracticeMode.TOPIC && !!a.answeredAt);
+          submitted || (attempt.mode !== PracticeMode.MOCK && !!a.answeredAt);
         const byId = new Map(q.options.map((o) => [o.id, o]));
         return {
           questionId: q.id,

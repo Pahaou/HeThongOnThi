@@ -57,3 +57,14 @@ npm run test:e2e    # e2e, cần Postgres đang chạy
 - [ERD](docs/erd.md)
 - [Kiến trúc](docs/kien-truc.md)
 - [Quy ước nhánh và commit](docs/quy-uoc.md)
+
+## Tính năng AI (Claude API)
+Đặt `ANTHROPIC_API_KEY` trong `backend/.env` để bật (model `claude-opus-5-5`). Không có key, hết lượt, AI lỗi/hết giờ/từ chối thì hệ thống tự dùng phương án dự phòng.
+
+| Tính năng | Ai dùng | Dự phòng khi AI không phản hồi |
+|---|---|---|
+| Sinh câu hỏi từ tài liệu (PDF/txt/md/bài học) → câu **chờ duyệt** | Giảng viên | Báo lỗi rõ ràng, soạn tay hoặc import Excel |
+| Giải thích đáp án dựa trên bài học liên quan (cache theo câu) | Học viên (câu đã làm) | Giải thích của giảng viên + trích đoạn bài học |
+| Gợi ý ôn theo điểm yếu (chọn câu bằng thuật toán, lời khuyên bằng AI) | Học viên | Lời khuyên soạn sẵn; việc chọn câu không phụ thuộc AI |
+
+Giới hạn mỗi người trong 24 giờ: `AI_LIMIT_GENERATE`, `AI_LIMIT_EXPLAIN`, `AI_LIMIT_ADVICE` (mặc định 20/30/10), cộng giới hạn 10 lần/phút. Mọi lần gọi ghi vào bảng `ai_usages` (kèm số token) để theo dõi chi phí.

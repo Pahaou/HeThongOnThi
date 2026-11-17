@@ -33,9 +33,8 @@ erDiagram
     exam_attempts ||--o{ time_extensions : extended
     exam_attempts ||--o{ submissions : "idempotent submit"
 
-    users ||--o{ ai_jobs : requests
-    ai_jobs ||--o{ ai_question_drafts : produces
-    ai_question_drafts }o--o| questions : "approved into"
+    users ||--o{ ai_usages : "gọi AI"
+    questions ||--o| ai_explanations : "cache giải thích"
 
     users {
         uuid id PK
@@ -247,25 +246,25 @@ erDiagram
         string idempotency_key UK
         timestamptz received_at
     }
-    ai_jobs {
+    ai_usages {
         uuid id PK
         uuid user_id FK
-        enum kind "GENERATE_QUESTIONS | EXPLAIN | RECOMMEND"
-        enum status "PENDING | DONE | FAILED | FALLBACK"
-        int tokens_used
-        text error
-        timestamptz created_at
+        enum feature "GENERATE_QUESTIONS | EXPLAIN | ADVICE"
+        enum status "SUCCESS | FALLBACK | FAILED"
+        int input_tokens
+        int output_tokens
+        string error
+        timestamptz created_at "đếm lượt trong 24 giờ"
     }
-    ai_question_drafts {
-        uuid id PK
-        uuid job_id FK
-        jsonb payload "câu hỏi + đáp án AI đề xuất"
-        enum review_status "PENDING | APPROVED | REJECTED"
-        uuid approved_question_id FK
+    ai_explanations {
+        uuid question_id PK
+        text content
+        string model
     }
 ```
 
 ## Ghi chú thiết kế
+- **Câu hỏi AI sinh** lưu thẳng vào `questions` với `source = AI`, `status = DRAFT`; giảng viên duyệt thì chuyển `ACTIVE`. Chỉ câu ACTIVE được dùng cho ôn tập, thi thử và thi chính thức.
 - **Sổ tay câu sai và thống kê năng lực không có bảng riêng**: tính bằng SQL gộp nhóm trên `practice_answers` đã chấm, nên luôn khớp với lịch sử làm bài. Câu "đã khắc phục" là câu có lần làm gần nhất đúng.
 - **Đề thi được "đóng băng"** vào `attempt_questions` lúc bắt đầu làm bài: sửa ngân hàng câu hỏi sau đó không ảnh hưởng bài đang thi, và chấm lại được.
 - **Server giữ giờ**: client chỉ hiển thị `deadline_at - now`; mọi lần lưu/nộp sau `deadline_at` (cộng một khoảng ân hạn nhỏ cho độ trễ mạng) bị từ chối hoặc tự nộp.

@@ -10,5 +10,6 @@ import { StatsService } from './stats.service';
 @Module({
   controllers: [PracticeController, BlueprintsController],
   providers: [PracticeService, BlueprintsService, StatsService],
+  exports: [PracticeService, StatsService],
 })
 export class PracticeModule {}
