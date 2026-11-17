@@ -77,7 +77,7 @@ export class ExamsController {
     @Id() id: string,
     @Body() dto: RecordEventsDto,
   ) {
-    return this.take.recordEvents(user, id, dto.events);
+    return this.take.recordEvents(user, id, dto.sessionId, dto.events);
   }
 
   @Post(':id/attempt/submit')

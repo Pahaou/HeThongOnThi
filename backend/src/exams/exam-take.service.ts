@@ -363,9 +363,18 @@ export class ExamTakeService {
    * Ghi sự kiện chống gian lận (gửi theo lô, kể cả gửi bù sau khi mất mạng).
    * Chỉ nhận khi bài đang làm; số vi phạm cộng dồn để giám thị xem nhanh.
    */
-  async recordEvents(user: JwtPayload, examId: string, events: EventItemDto[]) {
+  async recordEvents(
+    user: JwtPayload,
+    examId: string,
+    sessionId: string,
+    events: EventItemDto[],
+  ) {
     const attempt = await this.loadAttempt(user, examId);
-    if (attempt.status !== ExamAttemptStatus.IN_PROGRESS) {
+    // Tab cũ ở thiết bị đã bị thay (vd. laptop bỏ mở) không được cộng vi phạm
+    if (
+      attempt.status !== ExamAttemptStatus.IN_PROGRESS ||
+      attempt.activeSessionId !== sessionId
+    ) {
       return { recorded: 0, violationCount: attempt.violationCount };
     }
     const now = new Date();

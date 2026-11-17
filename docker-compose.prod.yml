@@ -34,6 +34,8 @@ services:
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?đặt JWT_ACCESS_SECRET}
       CORS_ORIGIN: https://${DOMAIN:-localhost}
       DB_POOL_SIZE: ${DB_POOL_SIZE:-20}
+      # Một reverse proxy (Caddy) đứng trước: lấy IP thật từ X-Forwarded-For
+      TRUST_PROXY: "1"
       UPLOAD_DIR: /app/uploads
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@hton.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?đặt ADMIN_PASSWORD}

@@ -227,6 +227,8 @@ export class QuestionsService {
         ),
       ]);
     }
+    // Giải thích AI đã lưu dựa trên nội dung cũ (có thể cả đáp án cũ)
+    await this.prisma.aiExplanation.deleteMany({ where: { questionId } });
     return this.get(actor, questionId);
   }
 
