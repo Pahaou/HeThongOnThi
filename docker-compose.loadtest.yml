@@ -1,0 +1,22 @@
+# Chạy backend trong cùng mạng Docker với Postgres/Redis để đo tải (tránh lớp
+# chuyển cổng của Docker Desktop trên Windows làm rớt kết nối khi mở hàng trăm
+# kết nối cùng lúc). Dùng cùng docker-compose.yml:
+#   docker build -t hton-backend backend
+#   docker compose -f docker-compose.yml -f docker-compose.loadtest.yml up -d backend
+# (Build riêng vì `compose --build` của Compose v5 đòi cấp thêm quyền đọc file.)
+services:
+  backend:
+    image: hton-backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hton}:${POSTGRES_PASSWORD:-hton}@postgres:5432/${POSTGRES_DB:-hton}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?đặt JWT_ACCESS_SECRET giống backend/.env}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-20}
+      UPLOAD_DIR: /app/uploads
+    ports:
+      - "3001:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
