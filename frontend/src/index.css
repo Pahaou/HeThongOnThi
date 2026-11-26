@@ -7,6 +7,17 @@
   --primary: #2563eb;
   --primary-text: #ffffff;
   --error: #c62828;
+  /* Màu trạng thái: nền nhạt + chữ đậm cho huy hiệu, màu đậm cho viền/chấm */
+  --ok: var(--ok);
+  --ok-bg: #d7f5dd;
+  --ok-text: #17692c;
+  --warn: #e0a800;
+  --warn-bg: #fff1c2;
+  --warn-text: #7a5600;
+  --bad-bg: #ffd9d6;
+  --bad-text: #9b1c1c;
+  /* Nhận diện tính năng AI (không dùng tím: dễ thành "giao diện AI" chung chung) */
+  --ai: #0d9488;
 
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   /* Chữ to dần theo bề rộng màn hình: 16px trên điện thoại, tối đa 19px trên màn lớn */
@@ -25,6 +36,15 @@
     --border: #2e3640;
     --primary: #4f8cff;
     --error: #ff6b6b;
+    --ok: #4ade80;
+    --ok-bg: #173622;
+    --ok-text: #86efac;
+    --warn: #facc15;
+    --warn-bg: #3a300c;
+    --warn-text: #fde68a;
+    --bad-bg: #401b1b;
+    --bad-text: #fca5a5;
+    --ai: #2dd4bf;
   }
 }
 
@@ -226,6 +246,12 @@ button.link.danger {
   color: var(--error);
 }
 
+button.secondary.delete-action {
+  margin-left: auto;
+  color: var(--error);
+  border-color: var(--error);
+}
+
 button.icon {
   padding: 4px 10px;
   background: transparent;
@@ -243,12 +269,12 @@ button.icon {
 }
 
 .badge.ok {
-  background: #d7f5dd;
-  color: #17692c;
+  background: var(--ok-bg);
+  color: var(--ok-text);
 }
 
 .notice {
-  color: #17692c;
+  color: var(--ok-text);
 }
 
 .topbar nav a {
@@ -318,7 +344,7 @@ button.icon {
   aspect-ratio: 16 / 9;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, var(--primary), #7c3aed);
+  background: color-mix(in srgb, var(--primary) 82%, var(--text));
   color: #fff;
   font-size: 3rem;
   font-weight: 700;
@@ -557,7 +583,7 @@ button.icon {
 }
 
 .lesson-icon.done {
-  color: #17692c;
+  color: var(--ok-text);
   font-weight: 700;
 }
 
@@ -650,8 +676,8 @@ button.icon {
 }
 
 .step-no.done {
-  background: #d7f5dd;
-  color: #17692c;
+  background: var(--ok-bg);
+  color: var(--ok-text);
 }
 
 @media (max-width: 640px) {
@@ -756,18 +782,18 @@ button.icon {
 }
 
 .badge.diff-easy {
-  background: #d7f5dd;
-  color: #17692c;
+  background: var(--ok-bg);
+  color: var(--ok-text);
 }
 
 .badge.diff-medium {
-  background: #fff1c2;
-  color: #7a5600;
+  background: var(--warn-bg);
+  color: var(--warn-text);
 }
 
 .badge.diff-hard {
-  background: #ffd9d6;
-  color: #9b1c1c;
+  background: var(--bad-bg);
+  color: var(--bad-text);
 }
 
 .question-content {
@@ -790,8 +816,8 @@ button.icon {
 }
 
 .answer-list li.correct {
-  border-color: #2e9d4a;
-  background: color-mix(in srgb, #2e9d4a 10%, transparent);
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
 }
 
 .option-letter {
@@ -875,8 +901,8 @@ label.choice {
 }
 
 .badge.wrong {
-  background: #ffd9d6;
-  color: #9b1c1c;
+  background: var(--bad-bg);
+  color: var(--bad-text);
 }
 
 .exam-bar {
@@ -1296,8 +1322,8 @@ label.choice {
 }
 
 .badge.state-submitted {
-  background: #d7f5dd;
-  color: #17692c;
+  background: var(--ok-bg);
+  color: var(--ok-text);
 }
 
 /* ---------- Thông báo trong lúc thi ---------- */
@@ -1317,8 +1343,8 @@ label.choice {
 }
 
 .banner-warn {
-  border-color: #e0a800;
-  background: color-mix(in srgb, #ffc107 14%, var(--surface));
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, var(--surface));
 }
 
 .banner-danger {
@@ -1351,8 +1377,21 @@ label.choice {
 }
 
 .dot.on {
-  background: #2e9d4a;
-  box-shadow: 0 0 0 3px color-mix(in srgb, #2e9d4a 25%, transparent);
+  background: var(--ok);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent);
+}
+
+.badge.warn {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.proctor-table tr.lost td {
+  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
+}
+
+.proctor-table tr.lost td:first-child {
+  box-shadow: inset 4px 0 0 var(--warn);
 }
 
 .proctor-table tr.flagged td {
@@ -1361,15 +1400,15 @@ label.choice {
 
 /* ---------- AI ---------- */
 .badge.ai {
-  background: color-mix(in srgb, #7c3aed 16%, transparent);
+  background: color-mix(in srgb, var(--ai) 16%, transparent);
   color: var(--text);
 }
 
 .ai-box {
   padding: 12px 14px;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, #7c3aed 40%, var(--border));
-  background: color-mix(in srgb, #7c3aed 6%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--ai) 40%, var(--border));
+  background: color-mix(in srgb, var(--ai) 6%, var(--surface));
 }
 
 .ai-box p {
@@ -1377,9 +1416,15 @@ label.choice {
 }
 
 .weakness-card {
-  border-left: 4px solid #7c3aed;
+  border-left: 4px solid var(--ai);
 }
 
 .weakness-card p {
   margin: 0;
+}
+
+/* Vòng focus thống nhất khi dùng bàn phím (Tab), không hiện khi bấm chuột */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 70%, transparent);
+  outline-offset: 2px;
 }

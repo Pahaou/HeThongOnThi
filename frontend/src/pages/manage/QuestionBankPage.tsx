@@ -324,10 +324,11 @@ export function QuestionBankPage() {
                   {question.status === 'DRAFT' && (
                     <button onClick={() => void approve(question)}>Duyệt</button>
                   )}
-                  <button className="link" onClick={() => setEditing(question.id)}>
+                  <button className="secondary" onClick={() => setEditing(question.id)}>
                     Sửa
                   </button>
-                  <button className="link danger" onClick={() => void deleteQuestion(question)}>
+                  {/* Tách xa nút Sửa để khó bấm nhầm */}
+                  <button className="secondary delete-action" onClick={() => void deleteQuestion(question)}>
                     Xóa
                   </button>
                 </div>

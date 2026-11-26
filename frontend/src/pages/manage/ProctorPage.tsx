@@ -114,11 +114,15 @@ export function ProctorPage() {
       total: rows.length,
       working: rows.filter((r) => r.attempt?.status === 'IN_PROGRESS').length,
       online: rows.filter((r) => r.attempt?.online).length,
+      lost: rows.filter(isLost).length,
       submitted: rows.filter((r) => r.attempt && r.attempt.status !== 'IN_PROGRESS').length,
       flagged: rows.filter((r) => (r.attempt?.violationCount ?? 0) > 0 || r.verdict !== 'VALID').length,
     }),
     [rows],
   )
+
+  // Thí sinh mất kết nối lên đầu: giám thị cần gia hạn trước khi hết giờ (hết giờ là tự nộp)
+  const sorted = useMemo(() => [...rows].sort((x, y) => Number(isLost(y)) - Number(isLost(x))), [rows])
 
   async function setVerdict(r: ProctorRow, verdict: Verdict) {
     let note: string | undefined
@@ -163,10 +167,12 @@ export function ProctorPage() {
           <strong>{summary.total}</strong>
         </div>
         <div className="card stat-tile">
-          <span className="muted small">Đang làm (online)</span>
-          <strong>
-            {summary.working} <span className="muted small">({summary.online})</span>
-          </strong>
+          <span className="muted small">Đang làm</span>
+          <strong>{summary.working}</strong>
+          <span className="muted small">
+            online {summary.online}
+            {summary.lost > 0 && <span className="error"> · mất kết nối {summary.lost}</span>}
+          </span>
         </div>
         <div className="card stat-tile">
           <span className="muted small">Đã nộp</span>
@@ -191,14 +197,19 @@ export function ProctorPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {sorted.map((r) => {
               const a = r.attempt
               const left =
                 a?.status === 'IN_PROGRESS'
                   ? (new Date(a.deadlineAt).getTime() - (now + clockOffset.current)) / 1000
                   : null
               return (
-                <tr key={r.candidateId} className={(a?.violationCount ?? 0) > 0 || r.verdict !== 'VALID' ? 'flagged' : undefined}>
+                <tr
+                  key={r.candidateId}
+                  className={
+                    isLost(r) ? 'lost' : (a?.violationCount ?? 0) > 0 || r.verdict !== 'VALID' ? 'flagged' : undefined
+                  }
+                >
                   <td>
                     <span
                       className={a?.online ? 'dot on' : 'dot'}
@@ -210,7 +221,7 @@ export function ProctorPage() {
                     <span className="muted small">{r.user.email}</span>
                   </td>
                   <td>
-                    {statusText(r)}
+                    {isLost(r) && <span className="badge warn">Mất kết nối</span>} {statusText(r)}
                     {a?.score != null && <span className="muted small"> · {a.score} điểm</span>}
                   </td>
                   <td>{a ? `${a.answeredCount}/${a.totalCount}` : '—'}</td>
@@ -249,8 +260,14 @@ export function ProctorPage() {
         {rows.length === 0 && <p className="muted">Chưa có thí sinh.</p>}
       </div>
       <p className="muted small">
-        Online = máy thí sinh liên lạc trong 45 giây gần nhất. Nhật ký chi tiết từng thí sinh xem ở trang chi tiết kỳ thi.
+        Online = máy thí sinh liên lạc trong 45 giây gần nhất. Thí sinh mất kết nối được xếp lên đầu: hết giờ hệ thống tự
+        nộp bài, nên cần gia hạn (ở trang chi tiết kỳ thi) trước khi hết giờ. Nhật ký chi tiết từng thí sinh cũng ở đó.
       </p>
     </section>
   )
+}
+
+/** Đang làm bài nhưng máy không liên lạc trong 45 giây (mất mạng, mất điện, đóng máy) */
+function isLost(r: ProctorRow) {
+  return r.attempt?.status === 'IN_PROGRESS' && !r.attempt.online
 }
