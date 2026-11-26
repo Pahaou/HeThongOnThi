@@ -18,6 +18,8 @@ export type GuardEventType =
   | 'RECONNECT'
 
 interface GuardEvent {
+  /** Để server bỏ bản gửi lại khi trang tải lại giữa lúc đang gửi */
+  id: string
   type: GuardEventType
   clientAt: string
   detail?: string
@@ -33,6 +35,16 @@ const WARN_TEXT: Partial<Record<GuardEventType, string>> = {
 }
 
 const FLUSH_MS = 5000
+
+/** randomUUID chỉ có trên HTTPS/localhost; demo qua http://IP-LAN thì tự tạo UUID v4 */
+function eventId(): string {
+  if (window.isSecureContext) return crypto.randomUUID()
+  const b = crypto.getRandomValues(new Uint8Array(16))
+  b[6] = (b[6] & 0x0f) | 0x40
+  b[8] = (b[8] & 0x3f) | 0x80
+  const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('')
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
+}
 
 export function useExamGuard(
   examId: string,
@@ -57,7 +69,11 @@ export function useExamGuard(
   // Sự kiện chưa gửi được lưu vào localStorage để tải lại trang không mất
   useEffect(() => {
     try {
-      queue.current = JSON.parse(localStorage.getItem(storageKey) ?? '[]') as GuardEvent[]
+      // Bản cũ trong localStorage có thể chưa có id: gán thêm để vẫn chống trùng được từ nay
+      queue.current = (JSON.parse(localStorage.getItem(storageKey) ?? '[]') as GuardEvent[]).map((e) => ({
+        ...e,
+        id: e.id ?? eventId(),
+      }))
     } catch {
       queue.current = []
     }
@@ -98,7 +114,7 @@ export function useExamGuard(
 
   const record = useCallback(
     (type: GuardEventType, detail?: string) => {
-      queue.current.push({ type, clientAt: new Date(nowRef.current()).toISOString(), detail })
+      queue.current.push({ id: eventId(), type, clientAt: new Date(nowRef.current()).toISOString(), detail })
       persist()
       const text = WARN_TEXT[type]
       if (text) setWarning(`${text}. Sự việc đã được ghi lại.`)
@@ -109,8 +125,19 @@ export function useExamGuard(
 
   useEffect(() => {
     if (!active) return
+    // Tải lại (F5) hay đóng trang cũng làm trang bị ẩn: không phải rời sang tab khác
+    let leaving = false
+    // Vẫn ghi dấu (không tính vi phạm) để giám thị thấy khoảng rời trang nếu thí sinh mở trang khác trong tab này
+    const onPageHide = () => {
+      leaving = true
+      record('RECONNECT', 'Rời hoặc tải lại trang')
+    }
+    // Quay lại trang từ bộ nhớ đệm (bfcache): tiếp tục theo dõi
+    const onPageShow = () => {
+      leaving = false
+    }
     const onVisibility = () => {
-      if (document.visibilityState === 'hidden') record('TAB_HIDDEN')
+      if (document.visibilityState === 'hidden' && !leaving) record('TAB_HIDDEN')
     }
     // Rời cửa sổ nhưng trang vẫn hiển thị (vd. bấm sang ứng dụng khác)
     const onBlur = () => {
@@ -131,6 +158,8 @@ export function useExamGuard(
     const onContext = block('CONTEXT_MENU')
     const onOnline = () => void flush()
 
+    window.addEventListener('pagehide', onPageHide)
+    window.addEventListener('pageshow', onPageShow)
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('blur', onBlur)
     document.addEventListener('fullscreenchange', onFullscreen)
@@ -141,6 +170,8 @@ export function useExamGuard(
     window.addEventListener('online', onOnline)
     const timer = setInterval(() => void flush(), FLUSH_MS)
     return () => {
+      window.removeEventListener('pagehide', onPageHide)
+      window.removeEventListener('pageshow', onPageShow)
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('blur', onBlur)
       document.removeEventListener('fullscreenchange', onFullscreen)
@@ -167,7 +198,7 @@ export function useExamGuard(
   }, [storageKey])
 
   /** Chạy fn (vd. confirm) mà không ghi sự kiện rời cửa sổ do chính nó gây ra. */
-  const quietly = useCallback(<T,>(fn: () => T): T => {
+  const quietly = useCallback(<T>(fn: () => T): T => {
     quietUntil.current = Date.now() + 60_000
     try {
       return fn()

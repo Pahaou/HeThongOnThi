@@ -434,21 +434,29 @@ async function seedDemoBlueprint() {
   console.log('Đề thi thử mẫu: 6 câu, 10 phút');
 }
 
-/** Kỳ thi mẫu đang mở (từ 1 giờ trước tới 7 ngày sau), học viên mẫu là thí sinh. */
+const DEMO_EXAM_TITLE = 'Thi giữa kỳ (mẫu)';
+
+/**
+ * Kỳ thi mẫu đang mở (từ 1 giờ trước tới 7 ngày sau), học viên mẫu là thí sinh.
+ * Chạy lại seed thì tạo lại từ đầu (xóa bài làm cũ) để demo luôn có kỳ thi mới; kỳ thi khác giữ nguyên.
+ */
 async function seedDemoExam(createdById: string, studentId: string) {
   const course = await prisma.course.findUnique({
     where: { slug: 'nhap-mon-lap-trinh-web' },
-    include: { blueprints: { include: { rules: true } }, exams: true },
+    include: { blueprints: { include: { rules: true } } },
   });
   const blueprint = course?.blueprints[0];
-  if (!course || !blueprint || course.exams.length > 0) return;
+  if (!course || !blueprint) return;
+  await prisma.exam.deleteMany({
+    where: { courseId: course.id, title: DEMO_EXAM_TITLE },
+  });
 
   const now = Date.now();
   await prisma.exam.create({
     data: {
       courseId: course.id,
       createdById,
-      title: 'Thi giữa kỳ (mẫu)',
+      title: DEMO_EXAM_TITLE,
       opensAt: new Date(now - 60 * 60 * 1000),
       closesAt: new Date(now + 7 * 24 * 60 * 60 * 1000),
       durationSec: 15 * 60,

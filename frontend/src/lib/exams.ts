@@ -101,7 +101,7 @@ export const EVENT_LABEL: Record<string, string> = {
   PASTE: 'Dán',
   CONTEXT_MENU: 'Chuột phải',
   SESSION_TAKEOVER: 'Mở bài ở thiết bị/tab khác',
-  RECONNECT: 'Kết nối lại',
+  RECONNECT: 'Rời / tải lại trang',
 }
 
 export interface CandidateLog {

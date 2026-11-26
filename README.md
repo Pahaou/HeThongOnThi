@@ -53,6 +53,8 @@ npm run test:e2e    # e2e, cần Postgres đang chạy
 - Rate limit: 10 lần/phút cho đăng ký và đăng nhập, 300 lần/phút cho các API khác.
 
 ## Tài liệu
+- [Hướng dẫn sử dụng (học viên, giảng viên, giám thị)](docs/huong-dan.md)
+- [Kịch bản demo](docs/demo.md)
 - [Đặc tả yêu cầu](docs/dac-ta.md)
 - [ERD](docs/erd.md)
 - [Kiến trúc](docs/kien-truc.md)

@@ -514,15 +514,18 @@ enum AttemptEventType {
  * Nhật ký sự kiện khi thi (chống gian lận lớp 1). Bảng ghi nhiều nhất nên dùng bigint.
  */
 model AttemptEvent {
-  id        BigInt           @id @default(autoincrement())
-  attemptId String           @map("attempt_id") @db.Uuid
-  type      AttemptEventType
+  id            BigInt           @id @default(autoincrement())
+  attemptId     String           @map("attempt_id") @db.Uuid
+  type          AttemptEventType
   // Lúc xảy ra theo giờ server đã hiệu chỉnh ở client (có thể gửi bù sau khi mất mạng)
-  clientAt  DateTime         @map("client_at") @db.Timestamptz
-  serverAt  DateTime         @default(now()) @map("server_at") @db.Timestamptz
-  detail    String?
-  attempt   ExamAttempt      @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  clientAt      DateTime         @map("client_at") @db.Timestamptz
+  serverAt      DateTime         @default(now()) @map("server_at") @db.Timestamptz
+  detail        String?
+  // Mã do client tạo: gửi lại (tải lại trang, mất mạng) thì server bỏ bản trùng
+  clientEventId String?          @map("client_event_id") @db.Uuid
+  attempt       ExamAttempt      @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
+  @@unique([attemptId, clientEventId])
   @@index([attemptId, clientAt])
   @@map("attempt_events")
 }

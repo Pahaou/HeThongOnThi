@@ -100,6 +100,9 @@ export class ProctorService implements OnModuleDestroy {
     this.lastEmit.set(candidateId, Date.now());
     this.row(candidateId)
       .then((row) => {
+        // Bài đã chấm thì không còn cập nhật dày (lưu bài, hỏi trạng thái): bỏ mốc để Map không lớn mãi
+        if (row?.attempt?.status === 'GRADED')
+          this.lastEmit.delete(candidateId);
         if (row)
           this.server?.to(examRoom(examId)).emit('candidate:update', row);
       })

@@ -145,6 +145,11 @@ export const CLIENT_EVENT_TYPES = [
 ] as const;
 
 export class EventItemDto {
+  /** Mã do client tạo để server bỏ bản gửi lại (tải lại trang, mất mạng) */
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @IsEnum(CLIENT_EVENT_TYPES)
   type!: (typeof CLIENT_EVENT_TYPES)[number];
 
