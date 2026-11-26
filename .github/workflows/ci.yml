@@ -46,6 +46,8 @@ jobs:
       - run: npm ci
       - run: npx prisma migrate deploy
       - run: npx eslint "{src,test,prisma}/**/*.ts"
+      # build chỉ kiểm tra src; bước này kiểm tra kiểu cả test, seed và loadtest
+      - run: npx tsc --noEmit
       - run: npm run build
       - run: npm test
       - run: npm run test:e2e

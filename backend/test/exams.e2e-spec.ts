@@ -29,6 +29,7 @@ interface ExamView {
     content: string;
     options: { id: string; content: string }[];
     selectedOptionIds: string[];
+    clientSavedAt: string | null;
   }[];
 }
 interface MyExam {
@@ -511,9 +512,7 @@ describe('Official exams (e2e)', () => {
     expect(row.clientSavedAt!.getTime()).toBeLessThanOrEqual(Date.now());
 
     // Tải lại trang: server trả lựa chọn kèm thời điểm lưu để client gộp
-    const resumed = (await start(examId).expect(200)).body as ExamView & {
-      questions: { clientSavedAt: string | null }[];
-    };
+    const resumed = (await start(examId).expect(200)).body as ExamView;
     expect(
       resumed.questions.find((x) => x.questionId === q.questionId)
         ?.clientSavedAt,

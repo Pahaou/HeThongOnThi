@@ -292,20 +292,18 @@ export class AiService {
   /** Chủ đề yếu, số câu sẽ ôn và lời khuyên (AI, hoặc soạn sẵn khi AI không phản hồi). */
   async recommendation(user: JwtPayload, courseId: string) {
     await assertLearner(this.prisma, user, courseId);
-    const [overview, course, questionIds] = await Promise.all([
-      this.stats.overview(user, courseId),
+    const [course, weakness] = await Promise.all([
       this.prisma.course.findUniqueOrThrow({
         where: { id: courseId },
         select: { title: true },
       }),
-      this.weaknessQuestionIds(user, courseId),
+      this.weakness(user, courseId),
     ]);
+    const { overview, questionIds } = weakness;
     const weakTopics = overview.byTopic
       .filter((t) => t.level === 'WEAK' || t.level === 'FAIR')
       .sort((a, b) => (a.accuracy ?? 0) - (b.accuracy ?? 0));
-    const unresolvedWrong = (
-      await this.stats.unresolvedWrongIds(user.sub, courseId)
-    ).length;
+    const unresolvedWrong = weakness.unresolvedWrong.length;
 
     let advice: { source: 'AI' | 'FALLBACK'; text: string };
     const noData = overview.total.answered === 0;
@@ -366,13 +364,14 @@ export class AiService {
     return this.practice.startWeakness(
       user,
       courseId,
-      await this.weaknessQuestionIds(user, courseId),
+      (await this.weakness(user, courseId)).questionIds,
     );
   }
 
   // ---------- Hỗ trợ ----------
 
-  private async weaknessQuestionIds(user: JwtPayload, courseId: string) {
+  /** Thống kê theo chủ đề, câu sai chưa sửa và bộ câu ôn chọn từ đó (mỗi truy vấn chạy một lần). */
+  private async weakness(user: JwtPayload, courseId: string) {
     const [overview, unresolvedWrong, questions, correct] = await Promise.all([
       this.stats.overview(user, courseId),
       this.stats.unresolvedWrongIds(user.sub, courseId),
@@ -388,7 +387,7 @@ export class AiService {
     const byTopic = new Map<string, string[]>();
     for (const q of questions)
       byTopic.set(q.topicId, [...(byTopic.get(q.topicId) ?? []), q.id]);
-    return pickWeaknessQuestions({
+    const questionIds = pickWeaknessQuestions({
       unresolvedWrong,
       topics: overview.byTopic.map((t) => ({
         topicId: t.id,
@@ -400,6 +399,7 @@ export class AiService {
       answeredCorrect: new Set(correct.map((c) => c.questionId)),
       count: RECOMMEND_COUNT,
     });
+    return { overview, unresolvedWrong, questionIds };
   }
 
   private async withinQuota(

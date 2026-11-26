@@ -378,26 +378,33 @@ export class ExamTakeService {
       return { recorded: 0, violationCount: attempt.violationCount };
     }
     const now = new Date();
-    const violations = events.filter((e) =>
-      VIOLATION_EVENTS.has(e.type),
-    ).length;
-    const [, updated] = await this.prisma.$transaction([
-      this.prisma.attemptEvent.createMany({
-        data: events.map((e) => ({
-          attemptId: attempt.id,
-          type: e.type,
-          clientAt: clampClientTime(e.clientAt, now),
-          detail: e.detail,
-        })),
-      }),
-      this.prisma.examAttempt.update({
-        where: { id: attempt.id },
-        data: { violationCount: { increment: violations }, lastSeenAt: now },
-        select: { violationCount: true },
-      }),
-    ]);
+    const { created, violationCount } = await this.prisma.$transaction(
+      async (tx) => {
+        // Bỏ sự kiện đã nhận (trùng id): chỉ sự kiện mới được tính vi phạm
+        const created = await tx.attemptEvent.createManyAndReturn({
+          data: events.map((e) => ({
+            attemptId: attempt.id,
+            type: e.type,
+            clientAt: clampClientTime(e.clientAt, now),
+            detail: e.detail,
+            clientEventId: e.id,
+          })),
+          skipDuplicates: true,
+          select: { type: true },
+        });
+        const violations = created.filter((e) =>
+          VIOLATION_EVENTS.has(e.type),
+        ).length;
+        const { violationCount } = await tx.examAttempt.update({
+          where: { id: attempt.id },
+          data: { violationCount: { increment: violations }, lastSeenAt: now },
+          select: { violationCount: true },
+        });
+        return { created, violationCount };
+      },
+    );
     this.proctor.notify(examId, attempt.candidateId);
-    return { recorded: events.length, violationCount: updated.violationCount };
+    return { recorded: created.length, violationCount };
   }
 
   /** Trạng thái gọn để client hỏi định kỳ: hạn nộp có thể đã được gia hạn. */

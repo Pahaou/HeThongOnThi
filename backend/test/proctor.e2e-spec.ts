@@ -14,6 +14,7 @@ import {
   QuestionType,
   Role,
 } from '../src/generated/prisma/client';
+import { ProctorService } from '../src/exams/proctor.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { setupApp } from '../src/setup-app';
 
@@ -242,12 +243,17 @@ describe('Proctor realtime (e2e)', () => {
       s,
       (r) => r.verdict === 'VIOLATION' && r.attempt?.status !== 'IN_PROGRESS',
     );
+    // Nghe trước khi phân xử: hàng đợi có thể chấm xong trước khi `flagged` được xử lý
+    const graded = nextUpdate(s, (r) => r.attempt?.status === 'GRADED');
     await http()
       .patch(`/api/manage/exams/${examId}/candidates/${candidateId}/verdict`)
       .set(as(instructor))
       .send({ verdict: 'VIOLATION', note: 'Dùng tài liệu' })
       .expect(200);
     await flagged;
+    // Chấm xong thì không giữ mốc throttle của thí sinh nữa
+    await graded;
+    expect(app.get(ProctorService)['lastEmit'].has(candidateId)).toBe(false);
     await http()
       .get(`/api/exams/${examId}/attempt`)
       .set(as(student))
@@ -258,5 +264,5 @@ describe('Proctor realtime (e2e)', () => {
       .set(as(otherInstructor))
       .send({ verdict: 'VALID' })
       .expect(403);
-  });
+  }, 15_000); // chờ cả hàng đợi chấm bài (BullMQ)
 });

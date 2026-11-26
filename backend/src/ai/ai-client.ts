@@ -206,7 +206,8 @@ export class AnthropicAiClient implements AiClient {
 
   private requireClient(): Anthropic {
     if (!this.client)
-      throw new AiUnavailableError('Chưa cấu hình ANTHROPIC_API_KEY');
+      // Câu này hiện cho cả học viên: không nêu tên biến cấu hình (README nói cách bật)
+      throw new AiUnavailableError('Tính năng AI chưa được bật');
     return this.client;
   }
 

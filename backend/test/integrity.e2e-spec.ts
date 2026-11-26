@@ -228,6 +228,12 @@ describe('Exam integrity: extensions & events (e2e)', () => {
     ]).expect(200);
     expect(res.body).toEqual({ recorded: 3, violationCount: 2 });
 
+    // Trang tải lại gửi lại sự kiện đã gửi (còn trong localStorage): không ghi và không tính lần hai
+    const resent = { type: 'PASTE', clientAt: at, id: randomUUID() };
+    await sendEvents(examId, [resent]).expect(200);
+    const again = await sendEvents(examId, [resent]).expect(200);
+    expect(again.body).toEqual({ recorded: 0, violationCount: 3 });
+
     // Thí sinh không được tự ghi sự kiện đổi thiết bị
     await sendEvents(examId, [
       { type: 'SESSION_TAKEOVER', clientAt: at },
@@ -237,12 +243,13 @@ describe('Exam integrity: extensions & events (e2e)', () => {
     // Mở ở thiết bị khác: server tự ghi SESSION_TAKEOVER và tính vi phạm
     await start(examId, randomUUID()).expect(200);
     const l = await log(examId, candidateId);
-    expect(l.violationCount).toBe(3);
+    expect(l.violationCount).toBe(4);
     expect(l.sessionTakeovers).toBe(1);
     expect(l.events.map((e) => e.type)).toEqual([
       'TAB_HIDDEN',
       'COPY',
       'FULLSCREEN_ENTER',
+      'PASTE',
       'SESSION_TAKEOVER',
     ]);
 
@@ -250,7 +257,7 @@ describe('Exam integrity: extensions & events (e2e)', () => {
     const stale = await sendEvents(examId, [
       { type: 'TAB_HIDDEN', clientAt: at },
     ]).expect(200);
-    expect(stale.body).toEqual({ recorded: 0, violationCount: 3 });
+    expect(stale.body).toEqual({ recorded: 0, violationCount: 4 });
 
     await prisma.examAttempt.updateMany({
       where: { candidateId },
