@@ -24,7 +24,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { validateOptions } from '../questions/question-rules';
 import {
   AI_CLIENT,
-  AI_MODEL,
   type AiClient,
   AiUnavailableError,
   type AiUsageInfo,
@@ -233,7 +232,8 @@ export class AiService {
       );
     }
 
-    if (question.aiExplanation) {
+    // Chỉ dùng lại giải thích của đúng model đang chạy: đổi model (vd. AI trên máy sang Claude) thì giải thích lại
+    if (question.aiExplanation?.model === this.ai.model) {
       return { source: 'AI', content: question.aiExplanation.content };
     }
     const fallback = (note: string): ExplainResult => ({
@@ -262,10 +262,11 @@ export class AiService {
         teacherExplanation: question.explanation,
         lesson: question.lesson ?? undefined,
       });
+      const cached = { content: result.text, model: this.ai.model };
       await this.prisma.aiExplanation.upsert({
         where: { questionId },
-        create: { questionId, content: result.text, model: result.model },
-        update: {},
+        create: { questionId, ...cached },
+        update: cached,
       });
       await this.log(
         user.sub,
@@ -406,11 +407,13 @@ export class AiService {
     userId: string,
     feature: AiFeature,
   ): Promise<boolean> {
+    // Chỉ lượt AI trả lời thành công mới bị trừ: AI lỗi hay chưa bật (dự phòng) thì không,
+    // kẻo mỗi lần mở trang lúc AI tắt đã tiêu hết lượt của ngày
     const used = await this.prisma.aiUsage.count({
       where: {
         userId,
         feature,
-        status: { not: AiCallStatus.FAILED },
+        status: AiCallStatus.SUCCESS,
         createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       },
     });
@@ -447,7 +450,7 @@ export class AiService {
 
   /** Trạng thái AI cho giao diện (có cấu hình không, model nào) */
   status() {
-    return { available: this.ai.available, model: AI_MODEL };
+    return { available: this.ai.available, model: this.ai.model };
   }
 }
 

@@ -42,6 +42,13 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@hton.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?đặt ADMIN_PASSWORD}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # AI chạy trên máy, miễn phí: AI_PROVIDER=ollama (xem README, mục AI)
+      AI_PROVIDER: ${AI_PROVIDER:-anthropic}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+    # Để container gọi được Ollama chạy trên máy chủ (Docker Desktop đã có sẵn, Linux cần dòng này)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - uploads:/app/uploads
     depends_on:

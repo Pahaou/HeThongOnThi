@@ -26,6 +26,7 @@ const usage = { inputTokens: 100, outputTokens: 50 };
 
 /** AI giả: không gọi Claude thật; bật `failing` để kiểm tra phương án dự phòng. */
 class FakeAi implements AiClient {
+  model = 'fake';
   available = true;
   failing = false;
   calls = { generate: 0, explain: 0, advise: 0 };
@@ -44,7 +45,7 @@ class FakeAi implements AiClient {
   explain() {
     this.calls.explain++;
     this.guard();
-    return Promise.resolve({ text: 'Giải thích từ AI', usage, model: 'fake' });
+    return Promise.resolve({ text: 'Giải thích từ AI', usage });
   }
   advise() {
     this.calls.advise++;
@@ -121,6 +122,7 @@ describe('AI features (e2e, AI giả)', () => {
     // Giới hạn thấp để kiểm tra hết lượt
     process.env.AI_LIMIT_GENERATE = '3';
     process.env.AI_LIMIT_EXPLAIN = '3';
+    process.env.AI_LIMIT_ADVICE = '2';
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(AI_CLIENT)
       .useValue(fake)
@@ -185,6 +187,7 @@ describe('AI features (e2e, AI giả)', () => {
   afterAll(async () => {
     delete process.env.AI_LIMIT_GENERATE;
     delete process.env.AI_LIMIT_EXPLAIN;
+    delete process.env.AI_LIMIT_ADVICE;
     await prisma.course.deleteMany({ where: { instructorId: instructor.id } });
     await prisma.user.deleteMany({ where: { email: { in: emails } } });
     await app.close();
@@ -363,6 +366,20 @@ describe('AI features (e2e, AI giả)', () => {
       .expect(200);
     await explain().expect(200);
     expect(fake.calls.explain).toBe(before + 1);
+
+    // Đổi sang model khác (vd. từ AI trên máy sang Claude): bản cũ không được dùng lại
+    await prisma.aiExplanation.update({
+      where: { questionId },
+      data: { model: 'model-cu', content: 'Giải thích sai của model cũ' },
+    });
+    const regenerated = (await explain(instructor).expect(200)).body as {
+      content: string;
+    };
+    expect(regenerated.content).toBe('Giải thích từ AI');
+    expect(fake.calls.explain).toBe(before + 2);
+    await expect(
+      prisma.aiExplanation.findUnique({ where: { questionId } }),
+    ).resolves.toMatchObject({ model: 'fake', content: 'Giải thích từ AI' });
   });
 
   it('gợi ý ôn theo điểm yếu: chọn câu sai trước, lời khuyên AI, AI lỗi vẫn có lời khuyên dự phòng', async () => {
@@ -389,6 +406,22 @@ describe('AI features (e2e, AI giả)', () => {
     ).body as { advice: { source: string; text: string } };
     expect(fb.advice.source).toBe('FALLBACK');
     expect(fb.advice.text).toContain('1 câu');
+
+    // Lần AI không trả lời (hay AI chưa bật) không trừ lượt: giới hạn 2, đã dùng 1 lượt thành công
+    for (let i = 0; i < 3; i++) {
+      await http()
+        .get(`/api/courses/${courseId}/ai/recommendation`)
+        .set(as(student))
+        .expect(200);
+    }
+    fake.failing = false;
+    const again = (
+      await http()
+        .get(`/api/courses/${courseId}/ai/recommendation`)
+        .set(as(student))
+        .expect(200)
+    ).body as { advice: { source: string } };
+    expect(again.advice.source).toBe('AI');
 
     const attempt = (
       await http()
