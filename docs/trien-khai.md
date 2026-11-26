@@ -65,18 +65,36 @@ docker compose -f docker-compose.prod.yml stop backend
 gunzip -c backups/hton-YYYYMMDD-HHMMSS.sql.gz | docker compose -f docker-compose.prod.yml exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE $POSTGRES_DB WITH (FORCE)" -c "CREATE DATABASE $POSTGRES_DB" && psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 docker compose -f docker-compose.prod.yml start backend
 ```
-File đính kèm bài học nằm ở volume `uploads`, không nằm trong bản sao lưu CSDL.
+File đính kèm bài học nằm ở volume `uploads`, không nằm trong bản sao lưu CSDL. Sao lưu riêng (đã chạy thử 27/11/2026; trong Git Bash thêm `MSYS_NO_PATHCONV=1 ` ở đầu lệnh):
+```bash
+docker run --rm -v hton-prod_uploads:/u:ro -v "$PWD/backups:/b" postgres:16-alpine tar czf /b/uploads-$(date +%Y%m%d).tgz -C /u .
+```
 
 ## 6. Kế hoạch rollback
 **Khi nào:** health check lỗi, tỉ lệ lỗi 5xx tăng gấp đôi, hoặc chức năng thi (vào thi/lưu/nộp) hỏng sau khi cập nhật.
 
 **Cách làm (dưới 5 phút):**
-1. `git checkout <tag hoặc commit trước>` (các mốc: `v0.1`, `v0.2`, `v0.3`, ...)
+1. `git checkout <tag hoặc commit trước>` (bản ổn định gần nhất: `v1.0`; các mốc cũ: `v0.4`, `v0.5`, `v0.6`)
 2. `docker build -t hton-backend backend && docker build -t hton-web frontend
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d backend web`
 3. Kiểm tra lại mục 3.
+4. Lần cập nhật sau: `git checkout main` trước khi `git pull` (bước 1 để repo ở trạng thái detached HEAD, `git pull` sẽ báo lỗi).
 
 **Migration:** Prisma không có migration ngược. Nếu bản lỗi đã chạy migration làm hỏng dữ liệu, khôi phục từ bản sao lưu trước lần cập nhật (mục 5). Vì vậy **sao lưu ngay trước mỗi lần cập nhật**.
+
+### Diễn tập ngày 27/11/2026 (máy cá nhân, cụm production `hton-prod`)
+| Bước | Làm gì | Thời gian | Kết quả |
+|---|---|---|---|
+| 1 | Triển khai `v1.0`, ghi số dòng 10 bảng chính, sao lưu (`restart backup`) | 30 giây | Bản sao lưu 25,7 KB |
+| 2 | Cập nhật lên bản thử lỗi: thêm migration (cột mới trong `courses`) và đổi tiêu đề trang | 123 giây (build không có cache) | Migration chạy, DB có 14 migration |
+| 3 | Rollback theo các bước 1–3 ở trên | **24 giây** (layer của `v1.0` còn trong cache Docker) | Health ok, tiêu đề cũ. Backend `v1.0` chạy bình thường dù DB thừa một migration ("No pending migrations to apply") |
+| 4 | Khôi phục bản sao lưu trước cập nhật, đúng lệnh ở mục 5 | 10 giây | Số dòng 10 bảng khớp 100%, cột của bản lỗi đã mất. Đăng nhập học viên/giảng viên và WebSocket giám thị đều ổn |
+| 5 | Khôi phục cùng file vào DB trống ở cụm riêng (`docker compose -p hton-restore ... up -d postgres`) | 4 giây | Số dòng khớp bản gốc |
+
+**Ghi nhận:**
+- Rollback nhanh nhờ cache build. Nếu cache đã bị dọn (`docker system prune`), thời gian build như bước 2, khoảng 2 phút, vẫn dưới 5 phút.
+- Không cần sửa lệnh khôi phục ở mục 5: chạy nguyên văn đều được, kể cả trên DB mới.
+- Thiếu lệnh sao lưu file đính kèm, nay đã thêm vào mục 5.
 
 ## 7. Giám sát
 - Log: `docker compose -f docker-compose.prod.yml logs -f backend` (Nest ghi ra stdout; lượt quét chấm bài in số bài tự nộp/xếp hàng lại).
