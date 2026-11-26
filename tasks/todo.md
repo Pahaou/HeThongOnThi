@@ -92,10 +92,10 @@ Lệnh kiểm chứng dùng chung (trong `backend/`): `npm test`, `npm run test:
 ### T7: Diễn tập rollback và khôi phục sao lưu
 **Mô tả:** Thử thật mục 5–6 của runbook. Bây giờ đã có tag `v1.0` chứa Dockerfile.
 **Tiêu chí đạt:**
-- [ ] Cập nhật lên một commit thử, rollback về `v1.0` trong dưới 5 phút, health trả ok
-- [ ] Khôi phục từ file sao lưu vào máy và DB mới, số dòng các bảng chính khớp với bản gốc
+- [x] Cập nhật lên một commit thử, rollback về `v1.0` trong dưới 5 phút, health trả ok (24 giây, 27/11)
+- [x] Khôi phục từ file sao lưu vào máy và DB mới, số dòng các bảng chính khớp với bản gốc (10 bảng khớp)
 **Kiểm chứng:**
-- [ ] Ghi thời gian thực tế và các bước bị sai vào `docs/trien-khai.md`
+- [x] Ghi thời gian thực tế và các bước bị sai vào `docs/trien-khai.md`
 **Phụ thuộc:** T6
 **File:** `docs/trien-khai.md`
 **Cỡ:** XS
