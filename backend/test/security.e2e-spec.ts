@@ -128,7 +128,8 @@ describe('Security review (e2e)', () => {
     for (let i = 0; i < 10; i++) await login('nan-nhan@e2e.local').expect(401);
     await login('NAN-NHAN@e2e.local').expect(429);
     // 20 thí sinh khác cùng IP đăng nhập trong cùng phút: không ai bị chặn
-    for (let i = 0; i < 20; i++) await login(`thi-sinh-${i}@e2e.local`).expect(401);
+    for (let i = 0; i < 20; i++)
+      await login(`thi-sinh-${i}@e2e.local`).expect(401);
   });
 
   it('học viên không gọi được bất kỳ API quản lý nào', async () => {
