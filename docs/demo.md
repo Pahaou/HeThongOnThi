@@ -46,5 +46,4 @@ Chạy trên cụm production ở máy cá nhân ([trien-khai.md, mục 3b](trie
 
 ## Ghi chú cho người trình bày
 
-- Một lần chuyển sang ứng dụng khác thường bị ghi **2 sự kiện** (rời cửa sổ và ẩn tab), nên số vi phạm tăng 2. Đây là hành vi hiện tại, không phải lỗi demo.
 - Đổi tab không phạt ngay. Số vi phạm chỉ là căn cứ, giảng viên phân xử ở cột **Phân xử**.

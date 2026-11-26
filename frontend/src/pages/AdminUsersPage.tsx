@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/auth-context'
 import { api, type Role, type User } from '../lib/api'
 
-const ROLES: Role[] = ['STUDENT', 'INSTRUCTOR', 'ADMIN']
+const ROLE_LABEL: Record<Role, string> = { STUDENT: 'Học viên', INSTRUCTOR: 'Giảng viên', ADMIN: 'Quản trị' }
 
 export function AdminUsersPage() {
   const { user: me } = useAuth()
@@ -54,8 +54,10 @@ export function AdminUsersPage() {
                       disabled={u.id === me?.id}
                       onChange={(e) => void changeRole(u.id, e.target.value as Role)}
                     >
-                      {ROLES.map((r) => (
-                        <option key={r}>{r}</option>
+                      {(Object.keys(ROLE_LABEL) as Role[]).map((r) => (
+                        <option key={r} value={r}>
+                          {ROLE_LABEL[r]}
+                        </option>
                       ))}
                     </select>
                   </td>

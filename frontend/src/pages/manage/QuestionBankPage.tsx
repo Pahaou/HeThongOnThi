@@ -206,10 +206,10 @@ export function QuestionBankPage() {
                   <span className="muted small">{t.questionCount}</span>
                 </button>
                 <span className="topic-actions">
-                  <button className="link small" onClick={() => void renameTopic(t)}>
+                  <button className="link small" aria-label={`Sửa chủ đề ${t.name}`} onClick={() => void renameTopic(t)}>
                     Sửa
                   </button>
-                  <button className="link danger small" onClick={() => void deleteTopic(t)}>
+                  <button className="link danger small" aria-label={`Xóa chủ đề ${t.name}`} onClick={() => void deleteTopic(t)}>
                     Xóa
                   </button>
                 </span>
