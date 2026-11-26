@@ -64,8 +64,11 @@ npm run test:e2e    # e2e, cần Postgres đang chạy
 - [Hiệu năng và kịch bản sự cố](docs/hieu-nang.md)
 - [Rà soát bảo mật](docs/bao-mat.md)
 
-## Tính năng AI (Claude API)
-Đặt `ANTHROPIC_API_KEY` trong `backend/.env` để bật (model `claude-opus-5-5`). Không có key, hết lượt, AI lỗi/hết giờ/từ chối thì hệ thống tự dùng phương án dự phòng.
+## Tính năng AI
+Hai cách bật, chọn bằng `AI_PROVIDER`. Không bật, hết lượt, AI lỗi/hết giờ/từ chối thì hệ thống tự dùng phương án dự phòng.
+
+- **Claude API** (mặc định, trả phí): đặt `ANTHROPIC_API_KEY` (model `claude-opus-5-5`).
+- **AI chạy trên máy, miễn phí ([Ollama](https://ollama.com))**: cài Ollama, chạy `ollama pull qwen2.5:3b`, rồi đặt `AI_PROVIDER=ollama` (tùy chọn `OLLAMA_MODEL`, `OLLAMA_URL`; mặc định `qwen2.5:3b`, `http://localhost:11434`). Trong cụm production chạy bằng Docker, backend gọi Ollama trên máy chủ qua `http://host.docker.internal:11434` (đã cấu hình sẵn). Model nhỏ không đọc được PDF: chọn bài học hoặc dán nội dung. Chất lượng thực đo ở [hieu-nang.md](docs/hieu-nang.md#ai-chạy-trên-máy-ollama).
 
 | Tính năng | Ai dùng | Dự phòng khi AI không phản hồi |
 |---|---|---|
@@ -73,4 +76,4 @@ npm run test:e2e    # e2e, cần Postgres đang chạy
 | Giải thích đáp án dựa trên bài học liên quan (cache theo câu) | Học viên (câu đã làm) | Giải thích của giảng viên + trích đoạn bài học |
 | Gợi ý ôn theo điểm yếu (chọn câu bằng thuật toán, lời khuyên bằng AI) | Học viên | Lời khuyên soạn sẵn; việc chọn câu không phụ thuộc AI |
 
-Giới hạn mỗi người trong 24 giờ: `AI_LIMIT_GENERATE`, `AI_LIMIT_EXPLAIN`, `AI_LIMIT_ADVICE` (mặc định 20/30/10), cộng giới hạn 10 lần/phút. Mọi lần gọi ghi vào bảng `ai_usages` (kèm số token) để theo dõi chi phí.
+Giới hạn mỗi người trong 24 giờ: `AI_LIMIT_GENERATE`, `AI_LIMIT_EXPLAIN`, `AI_LIMIT_ADVICE` (mặc định 20/30/10), chỉ tính lượt AI trả lời thành công, cộng giới hạn 10 lần/phút. Mọi lần gọi ghi vào bảng `ai_usages` (kèm số token) để theo dõi chi phí.

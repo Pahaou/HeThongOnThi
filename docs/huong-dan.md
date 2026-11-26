@@ -65,7 +65,7 @@ Tạo khóa, sửa thông tin chung, thêm chương và bài học (bài đọc,
 Mỗi câu thuộc một chủ đề và có độ khó (Dễ, Trung bình, Khó). Có ba loại câu: Một đáp án, Nhiều đáp án, Đúng/Sai. Có ba cách thêm câu:
 - **+ Thêm câu hỏi:** soạn từng câu.
 - **Nhập từ Excel:** tải **file mẫu**, điền rồi bấm **Nhập câu hỏi**. Nếu có dòng sai thì không câu nào được nhập. Hệ thống liệt kê các dòng lỗi để bạn sửa rồi nhập lại.
-- **✦ Tạo bằng AI:** chọn chủ đề, độ khó, số câu và nguồn (bài học trong khóa, tệp .pdf/.txt/.md hoặc nội dung dán vào). Câu do AI tạo ở trạng thái **Chờ duyệt (AI)**. Bạn đọc lại, sửa nếu cần rồi bấm **Duyệt**. Câu chưa duyệt không vào đề.
+- **✦ Tạo bằng AI:** chọn chủ đề, độ khó, số câu và nguồn (bài học trong khóa, tệp .pdf/.txt/.md hoặc nội dung dán vào). Câu do AI tạo ở trạng thái **Chờ duyệt (AI)**. Bạn đọc lại, sửa nếu cần rồi bấm **Duyệt**. Câu chưa duyệt không vào đề. Khi hệ thống dùng AI chạy trên máy (Ollama), tệp PDF chưa đọc được: hãy chọn bài học hoặc dán nội dung. Với AI chạy trên máy, khoảng một nửa số câu cần sửa hoặc bỏ, nên đọc kỹ từng câu trước khi duyệt.
 
 ![Ngân hàng câu hỏi](img/gv-ngan-hang.png)
 ![Nhập từ Excel](img/gv-nhap-excel.png)

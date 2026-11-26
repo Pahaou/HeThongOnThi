@@ -44,3 +44,19 @@
 ## Kiểm thử tự động
 - Unit test 40: chấm điểm, tính giờ, sinh đề theo ma trận, đọc Excel, mức năng lực, chọn câu theo điểm yếu.
 - e2e 79 trên Postgres và Redis thật, chạy trong CI ở mỗi PR.
+
+## AI chạy trên máy (Ollama)
+Đo ngày 27/11/2026 trên cụm production ở máy cá nhân: Intel i5-12500H, RAM 16 GB, RTX 3050 Laptop 4 GB VRAM, Ollama 0.40.18, model `qwen2.5:3b` (1,9 GB, chạy hết trên GPU). Gọi qua API thật của app bằng tài khoản demo.
+
+| Tính năng | Thời gian | Token trung bình (vào / ra) | Chất lượng |
+|---|---|---|---|
+| Sinh 10 câu từ đoạn tài liệu HTTP (~1.500 ký tự) | 21–27 giây | 444 / 953 | 3 lần chạy: 3, 6, 5 câu dùng được ngay trên 10. Lỗi thường gặp: câu trùng, đánh dấu sai đáp án mã trạng thái, câu phủ định |
+| Sinh 3 câu từ một bài học có sẵn | 6–7 giây | | 3/3 dùng được ở lần 2; lần 3 cả 3 câu bị app loại vì sai định dạng (app chỉ lưu câu hợp lệ) |
+| Giải thích đáp án | 1,8–3,5 giây | 195 / 177 | 2/3 câu tốt. Câu nhiều đáp án đúng (flex/grid/block) có lúc chỉ nêu 2 trong 3 |
+| Gợi ý ôn | 1,5 giây | 96 / 113 | Đúng giọng, nhưng khi chưa có chủ đề yếu thì đưa lời khuyên chung chung (có lần nhắc JavaScript, không có trong khóa) |
+
+- Lần gọi đầu sau khi bật máy mất thêm khoảng 40 giây để nạp model; sau đó model được giữ trong bộ nhớ 30 phút. **Trước buổi demo nên gọi thử một lần.**
+- Đổi prompt (cấm câu phủ định và phương án chồng ý; nêu đủ mọi đáp án đúng) và giới hạn số token đầu ra nâng tỉ lệ câu dùng được từ 3/10 lên 5–6/10, và hết trường hợp giải thích chạy quá 30 giây.
+- `qwen3:4b` bị loại: không vừa VRAM (16 token/giây), sinh 10 câu quá 120 giây nên rơi về dự phòng.
+- Đặt model không tồn tại: sinh câu hỏi trả 503 có hướng dẫn soạn tay, giải thích và gợi ý dùng dự phòng, không có lỗi 500.
+- Kết luận: dùng được để demo luồng AI thật không tốn phí. Câu AI sinh **phải** được giảng viên duyệt (app đã bắt buộc). Muốn chất lượng cao hơn thì dùng Claude API hoặc model lớn hơn trên máy có GPU nhiều VRAM hơn.
