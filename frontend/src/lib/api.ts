@@ -62,14 +62,18 @@ async function parseError(res: Response): Promise<ApiError> {
 // refresh token cũ là bị đánh cắp và thu hồi cả phiên.
 let refreshing: Promise<AuthResponse> | null = null
 
+async function doRefresh(): Promise<AuthResponse> {
+  const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
+  if (!res.ok) throw await parseError(res)
+  const data = (await res.json()) as AuthResponse
+  accessToken = data.accessToken
+  return data
+}
+
 export function refreshSession(): Promise<AuthResponse> {
-  refreshing ??= fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
-    .then(async (res) => {
-      if (!res.ok) throw await parseError(res)
-      const data = (await res.json()) as AuthResponse
-      accessToken = data.accessToken
-      return data
-    })
+  // Nhiều tab (vd. trình duyệt khôi phục 2 tab) cũng xếp hàng qua Web Locks: tab sau
+  // gửi cookie đã xoay vòng thay vì token cũ. Web Locks chỉ có trên HTTPS/localhost.
+  refreshing ??= (navigator.locks ? navigator.locks.request('hton-refresh', doRefresh) : doRefresh())
     .finally(() => {
       refreshing = null
     })

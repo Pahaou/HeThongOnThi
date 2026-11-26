@@ -87,4 +87,4 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d backend web
 - Backend đặt `TRUST_PROXY=1` để lấy IP thật từ Caddy. Nếu thêm một proxy/CDN nữa phía trước thì tăng số này; nếu cho backend nhận request trực tiếp (không qua Caddy) thì bỏ biến này, kẻo client tự khai IP để lách giới hạn đăng nhập.
 - Bộ đếm rate limit lưu trong bộ nhớ từng tiến trình: chỉ đúng khi chạy **một** instance backend.
 - `npm audit`: còn 2 lỗi mức trung bình ở `uuid` (phụ thuộc của `exceljs`), chỉ xảy ra khi truyền tham số `buf`; bản sửa cần đổi phiên bản phá tương thích nên chưa áp dụng.
-- Đăng nhập giới hạn 10 lần/phút theo IP: thi tập trung cả phòng chung một IP có thể cần nâng ([ADR-004](decisions/ADR-004-rate-limit-theo-nguoi-dung.md)).
+- Đăng nhập giới hạn 10 lần/phút cho mỗi cặp IP + email: cả phòng thi chung một IP vẫn đăng nhập được, nhưng thử một mật khẩu trên nhiều email từ một IP không bị chặn ở route này ([ADR-004](decisions/ADR-004-rate-limit-theo-nguoi-dung.md)).

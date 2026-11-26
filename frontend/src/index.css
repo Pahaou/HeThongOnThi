@@ -2,7 +2,7 @@
   --bg: #f6f7f9;
   --surface: #ffffff;
   --text: #1c2430;
-  --muted: #6b7480;
+  --muted: #5f6873;
   --border: #dde1e6;
   --primary: #2563eb;
   --primary-text: #ffffff;
@@ -35,6 +35,8 @@
     --muted: #9aa3ad;
     --border: #2e3640;
     --primary: #4f8cff;
+    /* Chữ trắng trên xanh/đỏ sáng chỉ đạt ~3:1; chữ tối đạt trên 5.8:1 (WCAG AA) */
+    --primary-text: #0b1220;
     --error: #ff6b6b;
     --ok: #4ade80;
     --ok-bg: #173622;
@@ -608,7 +610,7 @@ button.icon {
 
 .path-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
   gap: 20px;
 }
 
@@ -705,7 +707,7 @@ button.icon {
 
 @media (max-width: 900px) {
   .bank {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -746,7 +748,8 @@ button.icon {
   padding: 0 10px 6px;
 }
 
-.topic-li:not(:hover) .topic-actions {
+/* Hiện cả khi đang Tab trong mục này, kẻo người dùng bàn phím không tới được Sửa/Xóa */
+.topic-li:not(:hover):not(:focus-within) .topic-actions {
   visibility: hidden;
 }
 
@@ -869,7 +872,8 @@ label.choice {
 /* ---------- Ôn tập và thi thử ---------- */
 .practice-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  /* min(): màn hẹp hơn 320px thì một cột vừa khung, không tràn ngang */
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 20px;
   align-items: start;
 }

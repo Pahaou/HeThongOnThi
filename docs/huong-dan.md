@@ -93,12 +93,12 @@ Giảng viên của khóa là giám thị của các kỳ thi trong khóa. Ở t
 
 - Góc phải hiện **● Đang cập nhật trực tiếp** khi đã kết nối. Mỗi khi thí sinh lưu bài hay có sự kiện, dòng của thí sinh đó tự cập nhật, không cần tải lại trang.
 - **Online** nghĩa là máy thí sinh đã liên lạc trong 45 giây gần nhất. Thí sinh **Mất kết nối** được xếp lên đầu bảng.
-- Cột **Vi phạm** đếm các sự kiện rời tab, rời cửa sổ, thoát toàn màn hình, copy/paste, chuột phải, mở bài ở thiết bị khác. Một lần chuyển sang ứng dụng khác thường tính 2 (rời cửa sổ và ẩn tab). Tải lại trang không tính.
+- Cột **Vi phạm** đếm các sự kiện rời tab, rời cửa sổ, thoát toàn màn hình, copy/paste, chuột phải, mở bài ở thiết bị khác. Mỗi lần rời tab hoặc cửa sổ tính 1. Tải lại trang không tính.
 
 ### Gia hạn: làm **trước khi hết giờ**
 Khi thí sinh mất kết nối hoặc gặp sự cố, vào trang chi tiết kỳ thi, bấm **Gia hạn** ở dòng thí sinh đó.
 
-> **Quan trọng:** Hết giờ là hệ thống tự nộp bài trong vòng khoảng 30 giây. Bài đã nộp thì **không gia hạn được nữa**. Thấy thí sinh mất kết nối thì gia hạn ngay, đừng chờ.
+> **Quan trọng:** Bài đã nộp thì **không gia hạn được nữa**. Thí sinh còn mạng thì máy tự nộp đúng lúc hết giờ. Thí sinh mất kết nối thì server chờ thêm 60 giây để máy gửi bù, rồi tự nộp trong vòng 30 giây sau đó (tức tối đa khoảng 90 giây sau giờ hết). Thấy thí sinh mất kết nối thì gia hạn ngay, đừng chờ.
 
 ### Nhật ký và phân xử
 - **Nhật ký** (ở trang chi tiết kỳ thi) liệt kê từng sự kiện kèm thời điểm. Mục "Rời / tải lại trang" không phải vi phạm nhưng cho biết thí sinh đã rời trang thi lúc nào. Sau đó nếu có khoảng thời gian dài không lưu bài thì cần hỏi lại thí sinh.
@@ -108,4 +108,4 @@ Khi thí sinh mất kết nối hoặc gặp sự cố, vào trang chi tiết k�
 
 ## Quản trị
 
-Tài khoản quản trị mở được trang **/admin/users**: xem danh sách người dùng và đổi vai trò (`STUDENT` = học viên, `INSTRUCTOR` = giảng viên, `ADMIN` = quản trị). Không đổi được vai trò của chính mình. Muốn ai soạn khóa học thì đổi người đó sang `INSTRUCTOR`.
+Tài khoản quản trị mở được trang **/admin/users**: xem danh sách người dùng và đổi vai trò (Học viên, Giảng viên, Quản trị). Không đổi được vai trò của chính mình. Muốn ai soạn khóa học thì đổi người đó sang Giảng viên.

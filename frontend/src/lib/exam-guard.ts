@@ -139,9 +139,15 @@ export function useExamGuard(
     const onVisibility = () => {
       if (document.visibilityState === 'hidden' && !leaving) record('TAB_HIDDEN')
     }
-    // Rời cửa sổ nhưng trang vẫn hiển thị (vd. bấm sang ứng dụng khác)
+    // Rời cửa sổ nhưng trang vẫn hiển thị (vd. bấm sang ứng dụng khác). Chờ một chút vì
+    // chuyển tab cũng phát blur ngay trước visibilitychange: khi đó chỉ tính TAB_HIDDEN
+    let blurTimer: number | undefined
     const onBlur = () => {
-      if (document.visibilityState === 'visible' && Date.now() > quietUntil.current) record('WINDOW_BLUR')
+      if (Date.now() <= quietUntil.current) return
+      clearTimeout(blurTimer)
+      blurTimer = window.setTimeout(() => {
+        if (document.visibilityState === 'visible' && !document.hasFocus()) record('WINDOW_BLUR')
+      }, 300)
     }
     const onFullscreen = () => {
       const on = !!document.fullscreenElement
@@ -181,6 +187,7 @@ export function useExamGuard(
       document.removeEventListener('contextmenu', onContext)
       window.removeEventListener('online', onOnline)
       clearInterval(timer)
+      clearTimeout(blurTimer)
     }
   }, [active, record, flush])
 
