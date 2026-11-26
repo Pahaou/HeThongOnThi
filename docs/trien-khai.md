@@ -24,6 +24,29 @@ Backend tự chạy `prisma migrate deploy` mỗi lần khởi động. Image đ
 - [ ] `docker compose -f docker-compose.prod.yml logs backend --since 10m` không có lỗi mới
 - [ ] Có file sao lưu đầu tiên trong `./backups/`
 
+## 3b. Chạy trên máy cá nhân (Windows + Docker Desktop)
+Dùng đúng cấu hình production, chỉ khác `DOMAIN=localhost` (Caddy tự cấp chứng chỉ nội bộ). Đã chạy thử ngày 26/11/2026.
+
+1. Mở Docker Desktop trước (cài ở `%LOCALAPPDATA%\Programs\DockerDesktop\Docker Desktop.exe`), chờ `docker info` chạy được. Cổng 80 và 443 phải trống.
+2. Tạo `.env.prod` từ `.env.prod.example`: `DOMAIN=localhost`, sinh mật khẩu và `JWT_ACCESS_SECRET` bằng `openssl rand -hex 32` (Git Bash có sẵn `openssl`).
+3. Build và chạy như mục 2. Cụm có tên Compose riêng `hton-prod` nên chạy song song được với cụm dev (`docker-compose.yml`, Postgres/Redis mở cổng 5432/6379).
+4. Trình duyệt sẽ cảnh báo chứng chỉ. Bấm "Nâng cao → Tiếp tục", hoặc cài chứng chỉ gốc của Caddy để hết cảnh báo:
+   ```bash
+   docker compose -f docker-compose.prod.yml --env-file .env.prod cp web:/data/caddy/pki/authorities/local/root.crt caddy-root.crt
+   ```
+   (trong Git Bash thêm `MSYS_NO_PATHCONV=1 ` vào đầu lệnh, kẻo đường dẫn `/data/...` bị đổi thành đường dẫn Windows) rồi mở `caddy-root.crt` → Install Certificate → Local Machine → "Trusted Root Certification Authorities".
+5. Dựng lại dữ liệu demo từ đầu (xóa hết dữ liệu của cụm này):
+   ```bash
+   docker compose -f docker-compose.prod.yml --env-file .env.prod down -v
+   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+   docker compose -f docker-compose.prod.yml --env-file .env.prod exec backend node dist-seed/prisma/seed.js
+   ```
+   Chỉ làm mới kỳ thi mẫu (giữ dữ liệu khác): chạy lại riêng lệnh seed.
+
+**Gặp lỗi khi chạy thử:**
+- Backend khởi động lại liên tục với `P1000: Authentication failed`: volume `hton-prod_pgdata` đã có từ lần chạy trước với mật khẩu khác (Postgres chỉ đọc `POSTGRES_PASSWORD` lúc tạo volume). Sửa mà không mất dữ liệu: `... exec -T postgres psql -U hton -d hton -c "ALTER USER hton PASSWORD '<mật khẩu trong .env.prod>'"`, rồi chạy lại `up -d`.
+- Không đo được giới hạn đăng nhập theo IP trên máy cá nhân: Docker Desktop NAT mọi kết nối nên backend chỉ thấy IP gateway (việc T5, làm trên VPS).
+
 ## 4. Cập nhật phiên bản
 ```bash
 git pull
@@ -34,6 +57,7 @@ Tránh cập nhật **trong giờ thi**: backend khởi động lại vài giây
 
 ## 5. Sao lưu và khôi phục
 - Container `backup` chạy `pg_dump` mỗi 24 giờ vào `./backups/hton-<thời điểm>.sql.gz`, giữ 7 bản. Nên chép thư mục này ra ngoài VPS định kỳ.
+- Nếu `pg_dump` lỗi (sai mật khẩu, Postgres chưa sẵn sàng), log ghi `backup FAILED` và không tạo file. Trước 26/11/2026 lỗi này tạo ra một file rỗng 20 byte trông như bản sao lưu tốt. Kiểm tra định kỳ: `docker compose -f docker-compose.prod.yml logs backup | grep FAILED`.
 - Sao lưu ngay: `docker compose -f docker-compose.prod.yml restart backup`.
 - Khôi phục (ghi đè dữ liệu hiện tại):
 ```bash

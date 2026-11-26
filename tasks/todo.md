@@ -22,7 +22,7 @@ Lệnh kiểm chứng dùng chung (trong `backend/`): `npm test`, `npm run test:
 - [x] `npx tsc --noEmit -p tsconfig.json` không còn lỗi
 - [x] CI có bước typecheck cả `src` lẫn `test`
 **Kiểm chứng:**
-- [ ] CI xanh (chờ push). Đã thử trên máy: lỗi kiểu cũ trong test làm `tsc --noEmit` báo lỗi, đúng bước CI mới chạy
+- [x] CI xanh trên PR #16
 **Phụ thuộc:** T1
 **File:** `backend/test/exams.e2e-spec.ts`, `.github/workflows/*.yml`
 **Cỡ:** XS
@@ -47,7 +47,7 @@ Lệnh kiểm chứng dùng chung (trong `backend/`): `npm test`, `npm run test:
 - [x] Tiêu đề trang "HTON – Học và ôn thi trực tuyến"
 - [x] Học viên thấy "Tính năng AI chưa được bật" thay vì tên biến cấu hình
 - [x] Tinh chỉnh UI: màu trạng thái thành token có bản tối, màn giám thị nổi bật thí sinh mất kết nối, nút Sửa/Xóa tách xa, thẻ khóa học màu phẳng, vòng focus bàn phím
-- [ ] Khóa "JavaScript cơ bản" trong DB dev bị chuyển sang bản nháp lúc 02:10 18/11, chưa rõ nguyên nhân
+- [x] Khóa "JavaScript cơ bản" trong DB dev đã bật lại 26/11. Không có test nào đổi trạng thái khóa học, nhiều khả năng do bấm "Chuyển về nháp" khi chạy thử giao diện
 - [ ] E2E và backend dev dùng chung hàng đợi Redis: chạy e2e khi đang bật backend dev thì test giám thị chập chờn (job chấm bị tiến trình khác lấy). Cân nhắc cho e2e dùng prefix hàng đợi riêng
 
 ## Giai đoạn B: Triển khai (máy cá nhân trước)
@@ -55,11 +55,11 @@ Lệnh kiểm chứng dùng chung (trong `backend/`): `npm test`, `npm run test:
 ### T4: Chạy cụm production trên máy cá nhân
 **Mô tả:** Làm theo mục 2–3 của `docs/trien-khai.md` trên máy Windows với Docker Desktop, `DOMAIN=localhost` (Caddy dùng chứng chỉ nội bộ). Dùng đúng cấu hình sẽ chạy trên VPS sau này.
 **Tiêu chí đạt:**
-- [ ] `https://localhost/api/health` trả `{"status":"ok"}`, mọi service `running`, backend `healthy`
-- [ ] Đủ 5 mục checklist ở mục 3 của runbook, kể cả có file sao lưu đầu tiên
-- [ ] Ghi vào runbook một mục "Chạy trên máy cá nhân" (cài chứng chỉ Caddy hoặc chấp nhận cảnh báo, mở Docker Desktop trước, lệnh dựng lại từ đầu)
+- [x] `https://localhost/api/health` trả `{"status":"ok"}`, mọi service `running`, backend `healthy` (26/11)
+- [x] Đủ 5 mục checklist ở mục 3 của runbook, kể cả có file sao lưu đầu tiên. Phát hiện và sửa lỗi sao lưu lỗi vẫn tạo file rỗng (pipefail)
+- [x] Ghi vào runbook một mục "Chạy trên máy cá nhân" (cài chứng chỉ Caddy hoặc chấp nhận cảnh báo, mở Docker Desktop trước, lệnh dựng lại từ đầu)
 **Kiểm chứng:**
-- [ ] Đăng nhập học viên và giảng viên trên 2 trình duyệt. Màn giám thị kết nối qua `wss://localhost`
+- [x] Đăng nhập học viên và giảng viên trên 2 trình duyệt. Màn giám thị kết nối qua `wss://localhost` (puppeteer, không lỗi 5xx/JS)
 **Phụ thuộc:** Checkpoint A
 **File:** `.env.prod` (chỉ trên máy, không commit), `docs/trien-khai.md`
 **Cỡ:** S
@@ -109,8 +109,8 @@ Lệnh kiểm chứng dùng chung (trong `backend/`): `npm test`, `npm run test:
 ### T8: Hướng dẫn sử dụng
 **Mô tả:** Mỗi vai trò một mục ngắn có ảnh chụp màn hình: học viên (học, ôn, thi, khi mất mạng), giảng viên (khóa học, câu hỏi, import Excel, AI, kỳ thi), giám thị (bảng realtime, gia hạn, phân xử).
 **Tiêu chí đạt:**
-- [ ] Có mục giám thị ghi rõ: **gia hạn trước khi hết giờ** khi thấy thí sinh offline, vì sau giờ hết hệ thống tự nộp trong ≤30 giây và không còn gia hạn được (mục 5 của review)
-- [ ] Mỗi luồng chính có ít nhất 1 ảnh
+- [x] Có mục giám thị ghi rõ: **gia hạn trước khi hết giờ** khi thấy thí sinh offline, vì sau giờ hết hệ thống tự nộp trong ≤30 giây và không còn gia hạn được (mục 5 của review)
+- [x] Mỗi luồng chính có ít nhất 1 ảnh (15 ảnh trong `docs/img/`)
 **Kiểm chứng:**
 - [ ] Một người chưa dùng hệ thống làm theo được luồng thi chính thức mà không cần hỏi
 **Phụ thuộc:** T1 (làm song song với giai đoạn B được)
@@ -120,10 +120,10 @@ Lệnh kiểm chứng dùng chung (trong `backend/`): `npm test`, `npm run test:
 ### T9: Kịch bản demo và dữ liệu demo
 **Mô tả:** Kịch bản demo 10–15 phút, kèm dữ liệu không hết hạn. Kỳ thi mẫu từng hết hạn ngày 15/11.
 **Tiêu chí đạt:**
-- [ ] Seed đặt giờ mở/đóng kỳ thi theo thời điểm chạy seed, và có lệnh làm mới dữ liệu demo
-- [ ] `docs/demo.md` liệt kê từng bước, tài khoản dùng, điều cần chỉ ra (mất mạng, F5, đổi tab, giám thị, AI dự phòng)
+- [x] Seed đặt giờ mở/đóng kỳ thi theo thời điểm chạy seed, và có lệnh làm mới dữ liệu demo (chạy lại seed tạo lại kỳ thi mẫu)
+- [x] `docs/demo.md` liệt kê từng bước, tài khoản dùng, điều cần chỉ ra (mất mạng, F5, đổi tab, giám thị, AI dự phòng)
 **Kiểm chứng:**
-- [ ] Chạy trọn kịch bản 2 lần trên máy cá nhân (một lần dựng lại từ đầu bằng lệnh trong `docs/demo.md`), có bấm giờ
+- [ ] Chạy trọn kịch bản 2 lần trên máy cá nhân (một lần dựng lại từ đầu bằng lệnh trong `docs/demo.md`), có bấm giờ. Đã chạy tự động 1 lần (puppeteer) qua mọi bước, còn người dùng chạy tay có bấm giờ
 **Phụ thuộc:** T4
 **File:** `backend/prisma/seed.ts`, `docs/demo.md`
 **Cỡ:** S
