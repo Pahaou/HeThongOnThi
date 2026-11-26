@@ -18,8 +18,9 @@ Chạy trên cụm production ở máy cá nhân ([trien-khai.md, mục 3b](trie
    docker compose -f docker-compose.prod.yml --env-file .env.prod exec backend node dist-seed/prisma/seed.js
    ```
 3. Kiểm tra `curl -k https://localhost/api/health` trả `{"status":"ok"}`.
-4. Mở 2 cửa sổ trình duyệt khác nhau (ví dụ Chrome thường và Chrome ẩn danh): một cho học viên, một cho giảng viên.
-5. Muốn demo lại từ đầu hoàn toàn (học viên chưa ghi danh, chưa có lịch sử ôn): xem lệnh `down -v` ở mục 3b của runbook.
+4. Nếu dùng AI chạy trên máy (`AI_PROVIDER=ollama`): kiểm tra Ollama đang chạy (biểu tượng ở khay hệ thống, hoặc `curl http://localhost:11434/api/version`), rồi nạp model trước bằng `ollama run qwen2.5:3b "xin chào"`. Lần nạp đầu mất khoảng 40 giây; nạp trước để lúc demo AI trả lời trong 2–3 giây.
+5. Mở 2 cửa sổ trình duyệt khác nhau (ví dụ Chrome thường và Chrome ẩn danh): một cho học viên, một cho giảng viên.
+6. Muốn demo lại từ đầu hoàn toàn (học viên chưa ghi danh, chưa có lịch sử ôn): xem lệnh `down -v` ở mục 3b của runbook.
 
 ## Các bước
 

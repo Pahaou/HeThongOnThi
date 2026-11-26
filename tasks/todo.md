@@ -80,11 +80,11 @@ Lệnh kiểm chứng dùng chung (trong `backend/`): `npm test`, `npm run test:
 ### T6: Bật AI thật và gắn v1.0
 **Mô tả:** Người dùng tự đặt `ANTHROPIC_API_KEY` vào `.env.prod` (không dán key vào chat, không commit). Chạy thật mỗi tính năng ít nhất 3 lần, đánh giá chất lượng và chi phí. Trước buổi demo: sinh sẵn một bộ câu hỏi và cache giải thích để demo không phụ thuộc hoàn toàn vào mạng.
 **Tiêu chí đạt:**
-- [ ] Sinh 10 câu từ một bài học. Giảng viên duyệt và ghi tỉ lệ câu dùng được
-- [ ] Giải thích đáp án và gợi ý ôn trả `source: "AI"`. Số token trong bảng `ai_usages` được tổng hợp vào docs
-- [ ] Tag `v1.0` gắn trên commit đang chạy trong cụm production
+- [x] Sinh 10 câu từ một bài học. Giảng viên duyệt và ghi tỉ lệ câu dùng được (27/11, Ollama `qwen2.5:3b` thay Claude vì không trả phí: 3–6/10, xem `docs/hieu-nang.md`)
+- [x] Giải thích đáp án và gợi ý ôn trả `source: "AI"`. Số token trong bảng `ai_usages` được tổng hợp vào docs
+- [x] Tag `v1.0` gắn trên commit đang chạy trong cụm production (95d7870; bản có Ollama sẽ là v1.1)
 **Kiểm chứng:**
-- [ ] Đặt key sai thì 3 tính năng tự xuống phương án dự phòng, không lỗi 500
+- [x] Đặt key sai thì 3 tính năng tự xuống phương án dự phòng, không lỗi 500 (thử bằng model Ollama không tồn tại)
 **Phụ thuộc:** T4, người dùng có API key
 **File:** `docs/hieu-nang.md` (hoặc mục AI trong README)
 **Cỡ:** S
