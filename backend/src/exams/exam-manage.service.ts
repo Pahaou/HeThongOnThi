@@ -267,24 +267,29 @@ export class ExamManageService {
       throw new ConflictException('Thí sinh đã nộp bài, không thể gia hạn');
     }
     const extraSec = minutes * 60;
-    const [, rows] = await this.prisma.$transaction([
-      this.prisma.timeExtension.create({
+    const deadlineAt = await this.prisma.$transaction(async (tx) => {
+      // Cộng trực tiếp trong SQL để hai lần gia hạn đồng thời không mất lần nào;
+      // điều kiện trạng thái chặn trường hợp lượt quét vừa tự nộp bài ngay trước đó
+      const rows = await tx.$queryRaw<{ deadline_at: Date }[]>`
+        UPDATE exam_attempts
+        SET deadline_at = deadline_at + make_interval(secs => ${extraSec})
+        WHERE id = ${attempt.id}::uuid AND status = 'IN_PROGRESS'
+        RETURNING deadline_at`;
+      if (rows.length === 0) {
+        throw new ConflictException('Thí sinh đã nộp bài, không thể gia hạn');
+      }
+      await tx.timeExtension.create({
         data: {
           attemptId: attempt.id,
           grantedById: actor.sub,
           extraSec,
           reason: reason.trim(),
         },
-      }),
-      // Cộng trực tiếp trong SQL để hai lần gia hạn đồng thời không mất lần nào
-      this.prisma.$queryRaw<{ deadline_at: Date }[]>`
-        UPDATE exam_attempts
-        SET deadline_at = deadline_at + make_interval(secs => ${extraSec})
-        WHERE id = ${attempt.id}::uuid
-        RETURNING deadline_at`,
-    ]);
+      });
+      return rows[0].deadline_at;
+    });
     this.proctor.notify(examId, candidateId);
-    return { deadlineAt: rows[0].deadline_at };
+    return { deadlineAt };
   }
 
   /**

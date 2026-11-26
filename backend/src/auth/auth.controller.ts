@@ -19,8 +19,21 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
 export const REFRESH_COOKIE = 'refresh_token';
-// Giới hạn chặt cho các route dễ bị dò mật khẩu
-const AUTH_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
+// Giới hạn chặt cho các route dễ bị dò mật khẩu: đếm theo IP + email, vì cả
+// phòng thi thường chung một IP (NAT) mà mỗi người một email (ADR-004).
+// shortcut: thử một mật khẩu trên nhiều email từ cùng một IP không bị giới
+// hạn ở đây; thêm throttler riêng theo IP (ngưỡng cao hơn sĩ số phòng thi)
+// nếu log cho thấy bị dò hàng loạt.
+const AUTH_THROTTLE = {
+  default: {
+    limit: 10,
+    ttl: 60_000,
+    getTracker: (req: Record<string, any>) => {
+      const email = (req.body as { email?: unknown } | undefined)?.email;
+      return `ip:${String(req.ip)}:${typeof email === 'string' ? email.toLowerCase() : ''}`;
+    },
+  },
+};
 
 @Controller('auth')
 export class AuthController {

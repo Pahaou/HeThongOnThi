@@ -119,6 +119,18 @@ describe('Security review (e2e)', () => {
     await login('203.0.113.2').expect(401);
   });
 
+  it('cả phòng thi chung một IP (NAT) vẫn đăng nhập được; dò mật khẩu một tài khoản vẫn bị chặn', async () => {
+    const login = (email: string) =>
+      http()
+        .post('/api/auth/login')
+        .set('X-Forwarded-For', '198.51.100.7')
+        .send({ email, password: 'Sai@12345' });
+    for (let i = 0; i < 10; i++) await login('nan-nhan@e2e.local').expect(401);
+    await login('NAN-NHAN@e2e.local').expect(429);
+    // 20 thí sinh khác cùng IP đăng nhập trong cùng phút: không ai bị chặn
+    for (let i = 0; i < 20; i++) await login(`thi-sinh-${i}@e2e.local`).expect(401);
+  });
+
   it('học viên không gọi được bất kỳ API quản lý nào', async () => {
     const id = randomUUID();
     const calls: [string, string][] = [
