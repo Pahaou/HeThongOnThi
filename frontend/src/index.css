@@ -8,7 +8,7 @@
   --primary-text: #ffffff;
   --error: #c62828;
   /* Màu trạng thái: nền nhạt + chữ đậm cho huy hiệu, màu đậm cho viền/chấm */
-  --ok: var(--ok);
+  --ok: #2e9d4a;
   --ok-bg: #d7f5dd;
   --ok-text: #17692c;
   --warn: #e0a800;
